@@ -1,0 +1,16 @@
+{
+  "name": "Prode Mundial 2026",
+  "short_name": "Prode 2026",
+  "description": "Predictor del Mundial 2026: modelo Elo + mercado, picks para tus prodes, resultados y cuotas automáticos.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f14",
+  "theme_color": "#0b0f14",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b0f14'/%3E%3Ctext x='50' y='66' font-size='52' text-anchor='middle'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
