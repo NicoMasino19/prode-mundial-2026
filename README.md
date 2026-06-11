@@ -50,9 +50,10 @@ manifest.json → para instalarla como app en el celular
 ## Modelo (resumen)
 
 Rating 2026 = ensamble de Elo (eloratings.net) + consenso de mercado (cuotas DraftKings,
-método de potencia). Goles por Poisson con λ = 1.20·10^(d̃/1100) y saturación tanh (s=500),
-constantes ajustadas por máxima verosimilitud sobre la fase de grupos de los Mundiales
-1998-2022 (n=336, Elo histórico reconstruido; validado out-of-sample 2018-2022).
+método de potencia). Goles por Poisson con λ = 1.25·10^(d̃/1100), saturación tanh (s=500)
+y Dixon-Coles ρ=−0.05; constantes calibradas contra la fase de grupos de los Mundiales
+1998-2022 (n=336, Elo histórico reconstruido; OOS 2018-2022) y elegidas maximizando
+puntos de prode realizados en backtest.
 Localía: EE.UU. +100; México +130 (altitud); Canadá +100.
 Fecha 3: empates mutuamente convenientes inflados ×1.75. Eliminatorias con prórroga/penales
 amortiguados. Ratings se actualizan partido a partido (K=60) con los resultados reales.

@@ -140,7 +140,7 @@ nav button.active{color:var(--accent)}
 </div>
 
 <div id="tab-prode" class="hidden">
-  <div class="note"><b>Pick óptimo para tus dos prodes.</b> <span style="color:var(--accent)">MP</span> = Mercado Pago (exacto 6 / resultado 3) · <span style="color:var(--accent2)">AM</span> = amigos (ganador 2 + 1 extra por exacto). Cada uno maximiza sus puntos esperados — a veces difieren. Borde amarillo = buen lugar para diferenciarte (la alternativa pierde &lt;0.08 pts esp.). Puntajes editables en Más → Ajustes.</div>
+  <div class="note"><b>Pick óptimo para tus dos prodes.</b> <span style="color:var(--accent)">MP</span> = Mercado Pago (exacto 6 / resultado 3) · <span style="color:var(--accent2)">AM</span> = amigos (ganador 2 + 1 extra por exacto). Cada uno maximiza sus puntos esperados — a veces difieren. Borde amarillo = buen lugar para diferenciarte (la alternativa pierde &lt;0.08 pts esp.). Debajo de cada pick: 2° y 3° mejor marcador con sus pts esperados, y la mejor alternativa con otro resultado (1/X/2). Puntajes editables en Más → Ajustes.</div>
   <div class="gsel" id="gselp" role="tablist" aria-label="Grupos del prode"></div>
   <div id="prodecards"></div>
 </div>
@@ -174,7 +174,7 @@ nav button.active{color:var(--accent)}
   <div class="card method">
     <h3>Metodología</h3>
     <p><b>Fuerza:</b> Rating 2026 = ensamble de Elo mundial (eloratings.net, 9-jun-2026) + consenso de mercado (cuotas DraftKings de grupo y campeón, sin margen vía método de potencia, ajuste Monte Carlo iterativo). Localía: EE.UU. +100; México +130 (altitud del Azteca); Canadá +100, hasta octavos.</p>
-    <p><b>Goles:</b> Poisson con λ = 1.20·10^(d̃/1100), saturación tanh (s=500), ρ=0. Constantes ajustadas por máxima verosimilitud sobre los 336 partidos de fase de grupos de los Mundiales 1998-2022 (Elo histórico reconstruido partido a partido), validado out-of-sample en 2018-2022. El set anterior sobreestimaba ~0.4 goles/partido y a los favoritos grandes.</p>
+    <p><b>Goles:</b> Poisson con λ = 1.25·10^(d̃/1100), saturación tanh (s=500), Dixon-Coles ρ=−0.05. Constantes calibradas contra los 336 partidos de fase de grupos de los Mundiales 1998-2022 (Elo histórico reconstruido), validado out-of-sample en 2018-2022 y elegidas maximizando puntos de prode realizados en backtest (+8% MP vs set original, +47% de exactos). Ojo: el 1-0 aparece seguido en los picks porque <i>es</i> el marcador más común del fútbol (21% de los partidos); el set anterior sugería 2-0/2-1 porque sobreestimaba goles.</p>
     <p><b>Cuotas por partido:</b> 1X2, over/under y spread de DraftKings (vía ESPN, automáticos), sin margen. Con O/U y spread se despejan las λ de goles implícitas del mercado (ajuste numérico por grilla), que reemplazan a las del Elo en la distribución de marcadores exactos; el 1X2 queda fusionado 80% mercado / 20% modelo y los marcadores se muestrean condicionados a ese 1X2. En llaves, si DraftKings ya publicó cuotas del cruce, también se usan.</p>
     <p><b>Torneo:</b> 72 partidos de grupos + cuadro oficial FIFA con 8 mejores terceros (asignación por backtracking). Fecha 3: empates mutuamente convenientes ×1.75. Eliminatorias: prórroga/penales con ventaja amortiguada P = 0.5 + 0.35·(We−0.5). Ratings se actualizan partido a partido (K=60).</p>
     <p><b>Límites:</b> el fútbol tiene varianza irreducible: el mejor modelo del mundo acierta ~55-60% de los 1X2. Usalo para decidir mejor, no para apostar plata que duela perder.</p>
@@ -255,11 +255,13 @@ const KO_ROUNDS=[["32avos · 28 jun – 3 jul",R32],["Octavos · 4 – 7 jul",R1
 const STAGE_OF={};R32.forEach(m=>STAGE_OF[m[0]]="R32");R16.forEach(m=>STAGE_OF[m[0]]="R16");QF.forEach(m=>STAGE_OF[m[0]]="QF");SF.forEach(m=>STAGE_OF[m[0]]="SF");STAGE_OF["M104"]="F";
 
 // ================= MODELO (compartido con el worker) =================
-// Constantes calibradas por máxima verosimilitud sobre fase de grupos de Mundiales 1998-2022
-// (n=336, Elo reconstruido partido a partido; validado out-of-sample 2018-2022).
-// El set anterior (BASE 1.35, CC 1000, SS 700, RHO -0.10) sobreestimaba ~0.4 goles/partido
-// y la prob. de victoria de favoritos grandes (85% pred. vs 77% real en Δ250-400).
-const CONSTS={BASE:1.20,CC:1100,SS:500,RHO:0,MAXG:12,DRAW_BOOST:1.75,W_MKT:0.8};
+// Constantes calibradas contra fase de grupos de Mundiales 1998-2022 (n=336, Elo
+// reconstruido partido a partido; validado out-of-sample 2018-2022).
+// El set original (BASE 1.35, CC 1000, SS 700, RHO -0.10) sobreestimaba ~0.4 goles/partido
+// y a los favoritos grandes (85% pred. vs 77% real en Δ250-400). Este set intermedio
+// empata en puntos de prode realizados con el óptimo de verosimilitud (747 vs 738 pts MP
+// en backtest; viejo: 690) pero da picks más variados (menos 1-0 monolítico).
+const CONSTS={BASE:1.25,CC:1100,SS:500,RHO:-0.05,MAXG:12,DRAW_BOOST:1.75,W_MKT:0.8};
 const {BASE,CC,SS,RHO,MAXG,DRAW_BOOST,W_MKT}=CONSTS;
 function homeBonus(t,stage){
   if(t==="Estados Unidos")return 100;
@@ -609,7 +611,7 @@ function prodePicksDual(eA,eB,ov,lam){
     for(let i=0;i<=6;i++)for(let j=0;j<=6;j++)
       list.push({i,j,ev:po*pout(i,j)+pb*M[i][j],out:i>j?"1":(i===j?"X":"2")});
     list.sort((a,b)=>b.ev-a.ev);
-    return {best:list[0],alt:list.find(x=>x.out!==list[0].out)};
+    return {best:list[0],alt:list.find(x=>x.out!==list[0].out),top:list.slice(0,3)};
   };
   return {
     mp:mk(settings.mpOut, Math.max(0,settings.mpExact-settings.mpOut)),
@@ -871,13 +873,15 @@ function renderProde(){
           <div class="lbl" style="color:var(--accent)">MP · ${settings.mpExact}/${settings.mpOut}</div>
           <div class="val">${pk.mp.best.i}-${pk.mp.best.j}</div>
           <div class="ev">${pk.mp.best.ev.toFixed(2)} pts esp.</div>
-          <div class="alt">alt: ${pk.mp.alt.i}-${pk.mp.alt.j} (Δ ${dMP.toFixed(2)})</div>
+          <div class="alt">${pk.mp.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div>
+          <div class="alt">alt ${pk.mp.alt.out}: ${pk.mp.alt.i}-${pk.mp.alt.j} (Δ ${dMP.toFixed(2)})</div>
         </div>
         <div class="pick ${dAM<0.08?'hot':''}">
           <div class="lbl" style="color:var(--accent2)">Amigos · ${settings.amOut}+${settings.amBonus}</div>
           <div class="val">${pk.am.best.i}-${pk.am.best.j}</div>
           <div class="ev">${pk.am.best.ev.toFixed(2)} pts esp.</div>
-          <div class="alt">alt: ${pk.am.alt.i}-${pk.am.alt.j} (Δ ${dAM.toFixed(2)})</div>
+          <div class="alt">${pk.am.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div>
+          <div class="alt">alt ${pk.am.alt.out}: ${pk.am.alt.i}-${pk.am.alt.j} (Δ ${dAM.toFixed(2)})</div>
         </div>
       </div>
     </div>`;
@@ -905,8 +909,8 @@ function renderProde(){
       const pk=prodePicksDual(eA2,eB2,ov2,lam2);
       h2+=`<div class="match"><div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${flagHTML(tA)} ${tA} – ${tB} ${flagHTML(tB)} <span class="mdate">${mid.replace("M","P.")}</span></div>
         <div class="pickbox">
-          <div class="pick"><div class="lbl" style="color:var(--accent)">MP</div><div class="val">${pk.mp.best.i}-${pk.mp.best.j}</div><div class="ev">${pk.mp.best.ev.toFixed(2)} pts</div></div>
-          <div class="pick"><div class="lbl" style="color:var(--accent2)">Amigos</div><div class="val">${pk.am.best.i}-${pk.am.best.j}</div><div class="ev">${pk.am.best.ev.toFixed(2)} pts</div></div>
+          <div class="pick"><div class="lbl" style="color:var(--accent)">MP</div><div class="val">${pk.mp.best.i}-${pk.mp.best.j}</div><div class="ev">${pk.mp.best.ev.toFixed(2)} pts</div><div class="alt">${pk.mp.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div></div>
+          <div class="pick"><div class="lbl" style="color:var(--accent2)">Amigos</div><div class="val">${pk.am.best.i}-${pk.am.best.j}</div><div class="ev">${pk.am.best.ev.toFixed(2)} pts</div><div class="alt">${pk.am.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div></div>
         </div></div>`;
     }
     if(any){card2.innerHTML=h2;wrap.appendChild(card2);}
