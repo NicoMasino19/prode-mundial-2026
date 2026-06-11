@@ -4,10 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0b0f14">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Predictor del Mundial 2026: modelo Elo + mercado, simulación Monte Carlo, picks óptimos para tus prodes y resultados/cuotas automáticos.">
+<meta property="og:title" content="Prode Mundial 2026">
+<meta property="og:description" content="Predicciones del Mundial 2026 con modelo Elo + mercado. Picks óptimos para tu prode, resultados y cuotas en automático.">
+<meta property="og:type" content="website">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prode 2026">
 <link rel="manifest" href="/manifest.json">
-<title>Prode Mundial 2026</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b0f14'/%3E%3Ctext x='50' y='66' font-size='52' text-anchor='middle'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E">
+<title>Prode Mundial 2026 — Predictor Elo + Mercado</title>
 <style>
 :root{
   --bg:#0b0f14;--panel:#121821;--panel2:#1a2230;--border:#243042;--text:#e8eef5;--muted:#8b99ab;
@@ -17,6 +24,8 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{font-size:16px}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding-bottom:calc(64px + var(--sab))}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 header{position:sticky;top:0;z-index:20;padding:calc(10px + var(--sat)) 16px 10px;background:linear-gradient(160deg,#0c2746 0%,#10395f 55%,#14503c 100%);border-bottom:1px solid var(--border)}
 header .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 header h1{font-size:17px;font-weight:800;letter-spacing:.2px}
@@ -24,8 +33,12 @@ header h1 small{font-weight:500;color:#9fc3e2}
 #sync{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#9fc3e2;border:1px solid #ffffff22;background:#ffffff10;border-radius:99px;padding:5px 11px;cursor:pointer;white-space:nowrap}
 #sync .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 #sync.ok .dot{background:var(--green)}#sync.err .dot{background:var(--red)}#sync.busy .dot{background:var(--accent2);animation:pul 1s infinite}
+@media (prefers-reduced-motion:reduce){#sync.busy .dot{animation:none}}
 @keyframes pul{50%{opacity:.3}}
-#substatus{font-size:10.5px;color:#7fa7c8;margin-top:5px}
+#substatus{font-size:10.5px;color:#7fa7c8;margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#simspin{display:none;width:10px;height:10px;border:2px solid #7fa7c8;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+#simspin.on{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
 main{max-width:760px;margin:0 auto;padding:14px 12px 30px}
 .note{background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:11px 13px;color:var(--muted);font-size:12.5px;line-height:1.55;margin-bottom:12px}
 .note b{color:var(--text)}
@@ -34,16 +47,15 @@ main{max-width:760px;margin:0 auto;padding:14px 12px 30px}
 .match{padding:10px 2px;border-bottom:1px solid #1f2937aa}
 .match:last-child{border-bottom:none}
 .mrow{display:grid;grid-template-columns:1fr 92px 1fr;align-items:center;gap:6px}
-.team{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+.team{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
 .team.right{align-items:flex-end;text-align:right}
 .team .nm{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.team .fl{font-size:21px;line-height:1}
+.fl{width:27px;height:20px;border-radius:4px;object-fit:cover;background:#0f141b;box-shadow:0 0 0 1px #ffffff18}
 .team .elo{font-size:10px;color:var(--muted)}
 .scores{display:flex;align-items:center;justify-content:center;gap:5px}
 .scores input{width:36px;height:34px;text-align:center;background:var(--panel2);color:var(--text);border:1.5px solid var(--border);border-radius:9px;font-size:16px;font-weight:800;-moz-appearance:textfield}
 .scores input::-webkit-outer-spin-button,.scores input::-webkit-inner-spin-button{-webkit-appearance:none}
 .scores input.entered{border-color:var(--green);color:var(--green)}
-.scores input.live{border-color:var(--accent2);color:var(--accent2)}
 .minfo{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;flex-wrap:wrap}
 .probbar{display:flex;flex:1;min-width:110px;height:6px;border-radius:4px;overflow:hidden;background:#0f141b}
 .probbar div:nth-child(1){background:var(--green)}.probbar div:nth-child(2){background:var(--draw)}.probbar div:nth-child(3){background:var(--red)}
@@ -60,6 +72,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}
 th{color:var(--muted);text-align:right;font-weight:600;padding:6px 5px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer}
 th:first-child,td:first-child{text-align:left}
 td{padding:7px 5px;border-bottom:1px solid #1f293766;text-align:right;white-space:nowrap}
+td:first-child{display:flex;align-items:center;gap:6px}
 .bar{display:inline-block;height:7px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;vertical-align:middle;margin-right:5px}
 .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:700}
 .tag.g1{background:#143b26;color:var(--green)}.tag.g2{background:#27331c;color:#a3d977}.tag.g3{background:#3a3320;color:var(--accent2)}
@@ -75,6 +88,7 @@ td{padding:7px 5px;border-bottom:1px solid #1f293766;text-align:right;white-spac
 .ko-match{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:9px}
 .ko-match .mlabel{font-size:10px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between;gap:6px}
 .ko-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12.5px;font-weight:600}
+.ko-row .tn{display:flex;align-items:center;gap:6px;min-width:0}
 .ko-row .pct{color:var(--muted);font-weight:400;font-size:11px}
 .ko-row input{width:34px;height:30px;text-align:center;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:14px;font-weight:700}
 .ko-row input.entered{border-color:var(--green);color:var(--green)}
@@ -85,15 +99,17 @@ nav button{flex:1;background:none;border:none;color:var(--muted);font-size:10px;
 nav button .ic{font-size:19px;line-height:1}
 nav button.active{color:var(--accent)}
 .hidden{display:none}
-.controls{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-.controls select,.controls button,.controls input{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13px}
+.controls{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.controls button{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;cursor:pointer}
 .controls button.primary{background:var(--accent);color:#06223a;font-weight:800;border:none}
+.controls button:disabled{opacity:.5}
 .method{line-height:1.65;font-size:13.5px}
 .method h3{color:var(--accent);margin:14px 0 6px;font-size:14px}
 .method code{background:var(--panel2);padding:1px 6px;border-radius:5px;font-size:12px}
 .setrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #1f293766;font-size:13.5px}
 .setrow input[type=number]{width:58px;height:32px;text-align:center;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px}
-.switch{position:relative;width:46px;height:26px}
+.setrow select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+.switch{position:relative;width:46px;height:26px;flex:none}
 .switch input{opacity:0;width:0;height:0}
 .slider{position:absolute;inset:0;background:var(--panel2);border:1px solid var(--border);border-radius:99px;cursor:pointer;transition:.2s}
 .slider:before{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:.2s}
@@ -103,27 +119,29 @@ nav button.active{color:var(--accent)}
 .gsel::-webkit-scrollbar{display:none}
 .gsel button{min-width:44px;padding:7px 0;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--muted);font-weight:700;font-size:13px;cursor:pointer}
 .gsel button.active{background:var(--panel2);color:var(--accent);border-color:var(--accent)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + var(--sab));z-index:40;background:#1c2330f5;border:1px solid var(--border);color:var(--text);border-radius:12px;padding:10px 16px;font-size:12.5px;max-width:90vw;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.show{opacity:1}
 </style>
 </head>
 <body>
 <header>
   <div class="row">
     <h1>⚽ Prode Mundial <small>2026</small></h1>
-    <button id="sync" class=""><span class="dot"></span><span id="synctxt">Sincronizar</span></button>
+    <button id="sync" aria-label="Sincronizar con ESPN"><span class="dot"></span><span id="synctxt">Sincronizar</span></button>
   </div>
-  <div id="substatus">—</div>
+  <div id="substatus"><span id="simspin" aria-hidden="true"></span><span id="statline">Cargando…</span></div>
 </header>
 
 <main>
 <div id="tab-partidos">
-  <div class="note" id="notepartidos">Resultados y cuotas se <b>sincronizan solos desde ESPN</b> al abrir y cada 3 minutos (partidos terminados ✓ verde; cuotas 📊 fusionadas 80/20 con el modelo). También podés cargar o corregir todo a mano. Tocá «cuotas» en un partido para verlas/editarlas.</div>
-  <div class="gsel" id="gsel"></div>
+  <div class="note">Resultados y cuotas se <b>sincronizan solos desde ESPN</b> al abrir y cada 3 minutos (terminados ✓ verde; cuotas 📊 fusionadas 80/20 con el modelo). Todo se puede cargar o corregir a mano — tocá «cuotas» en un partido.</div>
+  <div class="gsel" id="gsel" role="tablist" aria-label="Grupos"></div>
   <div id="groupcards"></div>
 </div>
 
 <div id="tab-prode" class="hidden">
-  <div class="note"><b>Pick óptimo para tus dos prodes.</b> <span style="color:var(--accent)">MP</span> = Mercado Pago (exacto 6 / resultado 3) · <span style="color:var(--accent2)">AM</span> = amigos (ganador 2 + 1 extra por exacto). Cada uno maximiza sus puntos esperados — a veces difieren. El borde amarillo marca buenos lugares para diferenciarte (la alternativa pierde &lt;0.08 pts esperados). Puntajes editables en Más → Ajustes.</div>
-  <div class="gsel" id="gselp"></div>
+  <div class="note"><b>Pick óptimo para tus dos prodes.</b> <span style="color:var(--accent)">MP</span> = Mercado Pago (exacto 6 / resultado 3) · <span style="color:var(--accent2)">AM</span> = amigos (ganador 2 + 1 extra por exacto). Cada uno maximiza sus puntos esperados — a veces difieren. Borde amarillo = buen lugar para diferenciarte (la alternativa pierde &lt;0.08 pts esp.). Puntajes editables en Más → Ajustes.</div>
+  <div class="gsel" id="gselp" role="tablist" aria-label="Grupos del prode"></div>
   <div id="prodecards"></div>
 </div>
 
@@ -141,14 +159,14 @@ nav button.active{color:var(--accent)}
 <div id="tab-mas" class="hidden">
   <div class="card">
     <h3>Ajustes</h3>
-    <div class="setrow"><span>Sincronización automática (ESPN)</span><label class="switch"><input type="checkbox" id="setauto" checked><span class="slider"></span></label></div>
-    <div class="setrow"><span>Simulaciones por corrida</span>
-      <select id="nsim" style="background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px"><option value="2000">2.000</option><option value="5000" selected>5.000</option><option value="20000">20.000</option></select></div>
-    <div class="setrow"><span>Prode MP: pts marcador exacto (total)</span><input type="number" id="mpExact" value="6"></div>
-    <div class="setrow"><span>Prode MP: pts solo resultado</span><input type="number" id="mpOut" value="3"></div>
-    <div class="setrow"><span>Prode amigos: pts ganador/empate</span><input type="number" id="amOut" value="2"></div>
-    <div class="setrow"><span>Prode amigos: pts extra por exacto</span><input type="number" id="amBonus" value="1"></div>
-    <div class="controls" style="margin-top:12px">
+    <div class="setrow"><span>Sincronización automática (ESPN)</span><label class="switch"><input type="checkbox" id="setauto" checked><span class="slider" aria-hidden="true"></span></label></div>
+    <div class="setrow"><label for="nsim">Simulaciones por corrida</label>
+      <select id="nsim"><option value="2000">2.000</option><option value="5000" selected>5.000</option><option value="20000">20.000</option></select></div>
+    <div class="setrow"><label for="mpExact">Prode MP: pts marcador exacto (total)</label><input type="number" id="mpExact" value="6"></div>
+    <div class="setrow"><label for="mpOut">Prode MP: pts solo resultado</label><input type="number" id="mpOut" value="3"></div>
+    <div class="setrow"><label for="amOut">Prode amigos: pts ganador/empate</label><input type="number" id="amOut" value="2"></div>
+    <div class="setrow"><label for="amBonus">Prode amigos: pts extra por exacto</label><input type="number" id="amBonus" value="1"></div>
+    <div class="controls">
       <button class="primary" id="resim">▶ Re-simular</button>
       <button id="clearall">Borrar todo lo cargado</button>
     </div>
@@ -156,7 +174,7 @@ nav button.active{color:var(--accent)}
   <div class="card method">
     <h3>Metodología</h3>
     <p><b>Fuerza:</b> Rating 2026 = ensamble de Elo mundial (eloratings.net, 9-jun-2026) + consenso de mercado (cuotas DraftKings de grupo y campeón, sin margen vía método de potencia, ajuste Monte Carlo iterativo). Localía: EE.UU. +100; México +130 (altitud del Azteca); Canadá +100, hasta octavos.</p>
-    <p><b>Goles:</b> Poisson con λ = 1.35·10^(d̃/1000), saturación tanh, corrección Dixon-Coles (ρ=−0.10). Calibrado contra la expectativa Elo (ECM ≈ 2×10⁻⁶).</p>
+    <p><b>Goles:</b> Poisson con λ = 1.35·10^(d̃/1000), saturación tanh, corrección Dixon-Coles (ρ=−0.10), calibrado contra la expectativa Elo (ECM ≈ 2×10⁻⁶).</p>
     <p><b>Cuotas por partido:</b> línea 1X2 de DraftKings (vía ESPN, automática) sin margen, fusionada 80% mercado / 20% modelo; los marcadores se muestrean condicionados al 1X2 objetivo.</p>
     <p><b>Torneo:</b> 72 partidos de grupos + cuadro oficial FIFA con 8 mejores terceros (asignación por backtracking). Fecha 3: empates mutuamente convenientes ×1.75. Eliminatorias: prórroga/penales con ventaja amortiguada P = 0.5 + 0.35·(We−0.5). Ratings se actualizan partido a partido (K=60).</p>
     <p><b>Límites:</b> el fútbol tiene varianza irreducible: el mejor modelo del mundo acierta ~55-60% de los 1X2. Usalo para decidir mejor, no para apostar plata que duela perder.</p>
@@ -164,34 +182,37 @@ nav button.active{color:var(--accent)}
 </div>
 </main>
 
-<nav>
-  <button data-tab="partidos" class="active"><span class="ic">📅</span>Partidos</button>
-  <button data-tab="prode"><span class="ic">🎯</span>Prode</button>
-  <button data-tab="grupos"><span class="ic">📊</span>Grupos</button>
-  <button data-tab="copa"><span class="ic">🏆</span>Copa</button>
-  <button data-tab="mas"><span class="ic">⚙️</span>Más</button>
+<nav aria-label="Secciones">
+  <button data-tab="partidos" class="active" aria-label="Partidos"><span class="ic" aria-hidden="true">📅</span>Partidos</button>
+  <button data-tab="prode" aria-label="Prode"><span class="ic" aria-hidden="true">🎯</span>Prode</button>
+  <button data-tab="grupos" aria-label="Grupos"><span class="ic" aria-hidden="true">📊</span>Grupos</button>
+  <button data-tab="copa" aria-label="Copa"><span class="ic" aria-hidden="true">🏆</span>Copa</button>
+  <button data-tab="mas" aria-label="Más opciones"><span class="ic" aria-hidden="true">⚙️</span>Más</button>
 </nav>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
+"use strict";
 // ================= DATOS =================
 const T = {};
 const RAW = [
-["México","🇲🇽",1813,"A"],["Sudáfrica","🇿🇦",1622,"A"],["Corea del Sur","🇰🇷",1807,"A"],["Rep. Checa","🇨🇿",1811,"A"],
-["Canadá","🇨🇦",1715,"B"],["Bosnia y Herz.","🇧🇦",1699,"B"],["Catar","🇶🇦",1466,"B"],["Suiza","🇨🇭",1866,"B"],
-["Brasil","🇧🇷",2026,"C"],["Marruecos","🇲🇦",1800,"C"],["Haití","🇭🇹",1536,"C"],["Escocia","🏴󠁧󠁢󠁳󠁣󠁴󠁿",1741,"C"],
-["Estados Unidos","🇺🇸",1768,"D"],["Paraguay","🇵🇾",1813,"D"],["Australia","🇦🇺",1767,"D"],["Turquía","🇹🇷",1885,"D"],
-["Alemania","🇩🇪",1983,"E"],["Curazao","🇨🇼",1455,"E"],["Costa de Marfil","🇨🇮",1725,"E"],["Ecuador","🇪🇨",1841,"E"],
-["Países Bajos","🇳🇱",1958,"F"],["Japón","🇯🇵",1904,"F"],["Suecia","🇸🇪",1782,"F"],["Túnez","🇹🇳",1714,"F"],
-["Bélgica","🇧🇪",1906,"G"],["Egipto","🇪🇬",1716,"G"],["Irán","🇮🇷",1728,"G"],["Nueva Zelanda","🇳🇿",1574,"G"],
-["España","🇪🇸",2073,"H"],["Cabo Verde","🇨🇻",1620,"H"],["Arabia Saudita","🇸🇦",1617,"H"],["Uruguay","🇺🇾",1910,"H"],
-["Francia","🇫🇷",2064,"I"],["Senegal","🇸🇳",1845,"I"],["Irak","🇮🇶",1644,"I"],["Noruega","🇳🇴",1941,"I"],
-["Argentina","🇦🇷",2017,"J"],["Argelia","🇩🇿",1827,"J"],["Austria","🇦🇹",1873,"J"],["Jordania","🇯🇴",1687,"J"],
-["Portugal","🇵🇹",2017,"K"],["RD Congo","🇨🇩",1745,"K"],["Uzbekistán","🇺🇿",1700,"K"],["Colombia","🇨🇴",1912,"K"],
-["Inglaterra","🏴󠁧󠁢󠁥󠁮󠁧󠁿",2040,"L"],["Croacia","🇭🇷",1854,"L"],["Ghana","🇬🇭",1614,"L"],["Panamá","🇵🇦",1709,"L"]];
-RAW.forEach(r=>T[r[0]]={flag:r[1],elo:r[2],g:r[3]});
+["México","mx",1813,"A"],["Sudáfrica","za",1622,"A"],["Corea del Sur","kr",1807,"A"],["Rep. Checa","cz",1811,"A"],
+["Canadá","ca",1715,"B"],["Bosnia y Herz.","ba",1699,"B"],["Catar","qa",1466,"B"],["Suiza","ch",1866,"B"],
+["Brasil","br",2026,"C"],["Marruecos","ma",1800,"C"],["Haití","ht",1536,"C"],["Escocia","gb-sct",1741,"C"],
+["Estados Unidos","us",1768,"D"],["Paraguay","py",1813,"D"],["Australia","au",1767,"D"],["Turquía","tr",1885,"D"],
+["Alemania","de",1983,"E"],["Curazao","cw",1455,"E"],["Costa de Marfil","ci",1725,"E"],["Ecuador","ec",1841,"E"],
+["Países Bajos","nl",1958,"F"],["Japón","jp",1904,"F"],["Suecia","se",1782,"F"],["Túnez","tn",1714,"F"],
+["Bélgica","be",1906,"G"],["Egipto","eg",1716,"G"],["Irán","ir",1728,"G"],["Nueva Zelanda","nz",1574,"G"],
+["España","es",2073,"H"],["Cabo Verde","cv",1620,"H"],["Arabia Saudita","sa",1617,"H"],["Uruguay","uy",1910,"H"],
+["Francia","fr",2064,"I"],["Senegal","sn",1845,"I"],["Irak","iq",1644,"I"],["Noruega","no",1941,"I"],
+["Argentina","ar",2017,"J"],["Argelia","dz",1827,"J"],["Austria","at",1873,"J"],["Jordania","jo",1687,"J"],
+["Portugal","pt",2017,"K"],["RD Congo","cd",1745,"K"],["Uzbekistán","uz",1700,"K"],["Colombia","co",1912,"K"],
+["Inglaterra","gb-eng",2040,"L"],["Croacia","hr",1854,"L"],["Ghana","gh",1614,"L"],["Panamá","pa",1709,"L"]];
+RAW.forEach(r=>T[r[0]]={iso:r[1],elo:r[2],g:r[3]});
 const GROUPS = {}; RAW.forEach(r=>{(GROUPS[r[3]]=GROUPS[r[3]]||[]).push(r[0])});
+function flagHTML(t){const iso=T[t].iso;
+  return `<img class="fl" alt="" loading="lazy" src="https://flagcdn.com/h24/${iso}.png" srcset="https://flagcdn.com/h48/${iso}.png 2x" onerror="this.style.display='none'">`;}
 
-// ESPN displayName -> nombre interno
 const ESPN_NAMES = {
 "Mexico":"México","South Africa":"Sudáfrica","South Korea":"Corea del Sur","Korea Republic":"Corea del Sur","Czechia":"Rep. Checa","Czech Republic":"Rep. Checa",
 "Canada":"Canadá","Bosnia and Herzegovina":"Bosnia y Herz.","Qatar":"Catar","Switzerland":"Suiza",
@@ -233,8 +254,9 @@ const KO_ALL=[...R32,...R16,...QF,...SF,...FIN];
 const KO_ROUNDS=[["32avos · 28 jun – 3 jul",R32],["Octavos · 4 – 7 jul",R16],["Cuartos · 9 – 11 jul",QF],["Semifinales · 14 – 15 jul",SF],["FINAL · 19 jul · MetLife",FIN]];
 const STAGE_OF={};R32.forEach(m=>STAGE_OF[m[0]]="R32");R16.forEach(m=>STAGE_OF[m[0]]="R16");QF.forEach(m=>STAGE_OF[m[0]]="QF");SF.forEach(m=>STAGE_OF[m[0]]="SF");STAGE_OF["M104"]="F";
 
-// ================= MODELO =================
-const BASE=1.35,CC=1000,SS=700,RHO=-0.10,MAXG=12;
+// ================= MODELO (compartido con el worker) =================
+const CONSTS={BASE:1.35,CC:1000,SS:700,RHO:-0.10,MAXG:12,DRAW_BOOST:1.75,W_MKT:0.8};
+const {BASE,CC,SS,RHO,MAXG,DRAW_BOOST,W_MKT}=CONSTS;
 function homeBonus(t,stage){
   if(t==="Estados Unidos")return 100;
   if(t==="México"&&(stage==="G"||stage==="R32"||stage==="R16"))return 130;
@@ -253,7 +275,7 @@ function scoreMatrix(lA,lB){
   return M;
 }
 function matchProbs(eA,eB){
-  const [lA,lB]=lambdas(eA,eB),M=scoreMatrix(lA,lB);
+  const lab=lambdas(eA,eB),M=scoreMatrix(lab[0],lab[1]);
   let w=0,d=0,bi=0,bj=0,bp=0;
   for(let i=0;i<=MAXG;i++)for(let j=0;j<=MAXG;j++){
     if(i>j)w+=M[i][j];else if(i===j)d+=M[i][j];
@@ -277,14 +299,6 @@ function eloDelta(eA,eB,a,b){
   const gd=Math.abs(a-b),G=gd<=1?1:(gd===2?1.5:(11+gd)/8);
   return 60*G*(res-we);
 }
-
-// ================= ESTADO =================
-let results={},koResults={},odds={};
-let settings={auto:true,mpExact:6,mpOut:3,amOut:2,amBonus:1};
-try{const s=localStorage.getItem("prode26");if(s){const o=JSON.parse(s);results=o.results||{};koResults=o.koResults||{};odds=o.odds||{};Object.assign(settings,o.settings||{});}}catch(e){}
-function save(){try{localStorage.setItem("prode26",JSON.stringify({results,koResults,odds,settings}));}catch(e){}}
-
-const W_MKT=0.8;
 function oddsToProbs(o){
   const r=[1/o[0],1/o[1],1/o[2]];
   const f=k=>Math.pow(r[0],k)+Math.pow(r[1],k)+Math.pow(r[2],k)-1;
@@ -300,14 +314,15 @@ function blendMarket(o,eH,eA){
   const s=b[0]+b[1]+b[2];return [b[0]/s,b[1]/s,b[2]/s];
 }
 function drawSendsBoth(pH,pA,pC,pD){
-  for(const [c,d] of [[pC+3,pD],[pC+1,pD+1],[pC,pD+3]]){
+  const cases=[[pC+3,pD],[pC+1,pD+1],[pC,pD+3]];
+  for(let k=0;k<3;k++){
+    const c=cases[k][0],d=cases[k][1];
     const okH=((c>pH+1)?1:0)+((d>pH+1)?1:0)+((pA+1>pH+1)?1:0)<=1;
     const okA=((c>pA+1)?1:0)+((d>pA+1)?1:0)+((pH+1>pA+1)?1:0)<=1;
     if(!(okH&&okA))return false;
   }
   return true;
 }
-const DRAW_BOOST=1.75;
 function inflateDraw(p){
   const d2=Math.min(p.d*DRAW_BOOST,0.65),s=(1-d2)/Math.max(1-p.d,1e-9);
   return [p.w*s,d2,p.l*s];
@@ -316,12 +331,134 @@ function sampleScoreOutcome(lA,lB,ov){
   const r=Math.random();
   const tgt=r<ov[0]?1:(r<ov[0]+ov[1]?0:-1);
   for(let t=0;t<40;t++){
-    const [a,b]=sampleScore(lA,lB);
-    const o=a>b?1:(a===b?0:-1);
-    if(o===tgt)return [a,b];
+    const ab=sampleScore(lA,lB);
+    const o=ab[0]>ab[1]?1:(ab[0]===ab[1]?0:-1);
+    if(o===tgt)return ab;
   }
   return tgt===1?[1,0]:(tgt===0?[1,1]:[0,1]);
 }
+function rankGroup(teams,pts,gd,gf){
+  return [...teams].sort((x,y)=>pts[y]-pts[x]||gd[y]-gd[x]||gf[y]-gf[x]||(0.5-Math.random()));
+}
+function assignThirds(qualGroups,slotSets){
+  const res=new Array(8).fill(null),used=new Set();
+  const order=[...Array(8).keys()].sort((a,b)=>{
+    const ca=slotSets[a].filter(g=>qualGroups.includes(g)).length;
+    const cb=slotSets[b].filter(g=>qualGroups.includes(g)).length;return ca-cb;});
+  function bt(k){
+    if(k===8)return true;
+    const i=order[k];
+    for(const g of qualGroups){if(!used.has(g)&&slotSets[i].includes(g)){used.add(g);res[i]=g;if(bt(k+1))return true;used.delete(g);res[i]=null;}}
+    return false;
+  }
+  if(!bt(0)){const free=qualGroups.filter(g=>!used.has(g));for(let i=0;i<8;i++)if(!res[i])res[i]=free.pop();}
+  return res;
+}
+const THIRD_SLOTS=R32.filter(m=>m[2].startsWith("3_")).map(m=>m[2].slice(2).split(""));
+
+// Núcleo de simulación: función PURA (corre igual en main thread y en el worker)
+function simulateCore(P){
+  const t0=Date.now();
+  const {N,baseElo,results,koResults,ovCache,gdone,GROUPS,GM,R32,R16,QF,SF,STAGE_OF,THIRD_SLOTS}=P;
+  const stat={};Object.keys(baseElo).forEach(t=>stat[t]={p1:0,p2:0,p3q:0,r32:0,r16:0,qf:0,sf:0,fin:0,ch:0,xp:0});
+  const matchup={},koWinCount={};
+  const allKO=[...R32,...R16,...QF,...SF,[ "M104","M101","M102"]];
+  allKO.forEach(m=>{matchup[m[0]]={};koWinCount[m[0]]={};});
+  for(let n=0;n<N;n++){
+    const elo={...baseElo};
+    const firsts={},seconds={},thirdRows=[];
+    for(const g in GROUPS){
+      const tg=GROUPS[g],pts={},gd={},gf={};
+      tg.forEach(t=>{pts[t]=0;gd[t]=0;gf[t]=0;});
+      let ptsSnap=null;
+      for(const m of GM){if(m.g!==g)continue;
+        if(m.md===3&&!ptsSnap)ptsSnap={...pts};
+        let a,b;
+        if(results[m.id]){a=results[m.id][0];b=results[m.id][1];}
+        else{
+          const eH=elo[m.h]+homeBonus(m.h,"G"),eA=elo[m.a]+homeBonus(m.a,"G");
+          const lab=lambdas(eH,eA);
+          let ov=ovCache[m.id]||null;
+          if(!ov&&m.md===3&&ptsSnap[m.h]>=4&&ptsSnap[m.a]>=4){
+            const oth=tg.filter(t=>t!==m.h&&t!==m.a);
+            if(drawSendsBoth(ptsSnap[m.h],ptsSnap[m.a],ptsSnap[oth[0]],ptsSnap[oth[1]]))
+              ov=inflateDraw(matchProbs(eH,eA));
+          }
+          const ab=ov?sampleScoreOutcome(lab[0],lab[1],ov):sampleScore(lab[0],lab[1]);
+          a=ab[0];b=ab[1];
+          const d=eloDelta(eH,eA,a,b);
+          elo[m.h]+=d;elo[m.a]-=d;
+        }
+        pts[m.h]+=a>b?3:(a===b?1:0);pts[m.a]+=b>a?3:(a===b?1:0);
+        gd[m.h]+=a-b;gd[m.a]+=b-a;gf[m.h]+=a;gf[m.a]+=b;
+      }
+      const rk=rankGroup(tg,pts,gd,gf);
+      firsts[g]=rk[0];seconds[g]=rk[1];
+      stat[rk[0]].p1++;stat[rk[1]].p2++;
+      tg.forEach(t=>stat[t].xp+=pts[t]);
+      thirdRows.push([g,rk[2],pts[rk[2]],gd[rk[2]],gf[rk[2]]]);
+    }
+    thirdRows.sort((x,y)=>y[2]-x[2]||y[3]-x[3]||y[4]-x[4]||Math.random()-0.5);
+    const qual3=thirdRows.slice(0,8).map(r=>r[0]);
+    const thirdTeam={};thirdRows.slice(0,8).forEach(r=>{thirdTeam[r[0]]=r[1];stat[r[1]].p3q++;});
+    const amap=assignThirds(qual3,THIRD_SLOTS);
+    const entrants={};
+    let si=0;
+    for(const mrow of R32){
+      const mid=mrow[0];
+      const resolve=s=>{
+        if(s[0]==="W")return firsts[s[2]];
+        if(s[0]==="R")return seconds[s[2]];
+        return thirdTeam[amap[si++]];
+      };
+      const tA=resolve(mrow[1]),tB=resolve(mrow[2]);
+      entrants[mid]=[tA,tB];
+      stat[tA].r32++;stat[tB].r32++;
+      const key=tA+"|"+tB;matchup[mid][key]=(matchup[mid][key]||0)+1;
+    }
+    const winners={};
+    const playKO=(mid,tA,tB)=>{
+      const st=STAGE_OF[mid]||"F";
+      const kr=gdone&&koResults[mid];
+      let a,b,w;
+      if(kr){a=kr.a;b=kr.b;w=a>b?tA:(b>a?tB:(kr.pen===0?tA:tB));}
+      else{
+        const eA=elo[tA]+homeBonus(tA,st),eB=elo[tB]+homeBonus(tB,st);
+        const lab=lambdas(eA,eB);
+        const ab=sampleScore(lab[0],lab[1]);a=ab[0];b=ab[1];
+        if(a===b){const we=1/(1+Math.pow(10,-(eA-eB)/400));w=Math.random()<(0.5+0.35*(we-0.5))?tA:tB;}
+        else w=a>b?tA:tB;
+      }
+      const d=eloDelta(elo[tA],elo[tB],a,b);elo[tA]+=d;elo[tB]-=d;
+      winners[mid]=w;koWinCount[mid][w]=(koWinCount[mid][w]||0)+1;
+      return w;
+    };
+    for(const mrow of R32)playKO(mrow[0],entrants[mrow[0]][0],entrants[mrow[0]][1]);
+    const rounds=[[R16,"r16"],[QF,"qf"],[SF,"sf"]];
+    for(const rk2 of rounds){
+      for(const mrow of rk2[0]){
+        const tA=winners[mrow[1]],tB=winners[mrow[2]];
+        stat[tA][rk2[1]]++;stat[tB][rk2[1]]++;
+        const k2=tA+"|"+tB;matchup[mrow[0]][k2]=(matchup[mrow[0]][k2]||0)+1;
+        playKO(mrow[0],tA,tB);
+      }
+    }
+    const fA=winners["M101"],fB=winners["M102"];
+    stat[fA].fin++;stat[fB].fin++;
+    const k3=fA+"|"+fB;matchup["M104"][k3]=(matchup["M104"][k3]||0)+1;
+    const ch=playKO("M104",fA,fB);
+    stat[ch].ch++;
+  }
+  for(const t in stat){const s=stat[t];s.p1/=N;s.p2/=N;s.p3q/=N;s.r32/=N;s.r16/=N;s.qf/=N;s.sf/=N;s.fin/=N;s.ch/=N;s.xp/=N;}
+  return {stat,matchup,koWinCount,N,ms:Date.now()-t0};
+}
+
+// ================= ESTADO =================
+let results={},koResults={},odds={};
+let settings={auto:true,mpExact:6,mpOut:3,amOut:2,amBonus:1};
+try{const s=localStorage.getItem("prode26");if(s){const o=JSON.parse(s);results=o.results||{};koResults=o.koResults||{};odds=o.odds||{};Object.assign(settings,o.settings||{});}}catch(e){}
+function save(){try{localStorage.setItem("prode26",JSON.stringify({results,koResults,odds,settings}));}catch(e){}}
+
 function groupPtsEntered(g){
   const pts={};GROUPS[g].forEach(t=>pts[t]=0);let n=0;
   for(const m of GM){if(m.g!==g||m.md===3)continue;
@@ -351,128 +488,33 @@ function liveElo(){
   return elo;
 }
 function groupsComplete(){return GM.every(m=>results[m.id]);}
-function rankGroup(teams,pts,gd,gf){
-  return [...teams].sort((x,y)=>pts[y]-pts[x]||gd[y]-gd[x]||gf[y]-gf[x]||(0.5-Math.random()));
-}
-function assignThirds(qualGroups,slotSets){
-  const res=new Array(8).fill(null),used=new Set();
-  const order=[...Array(8).keys()].sort((a,b)=>{
-    const ca=slotSets[a].filter(g=>qualGroups.includes(g)).length;
-    const cb=slotSets[b].filter(g=>qualGroups.includes(g)).length;return ca-cb;});
-  function bt(k){
-    if(k===8)return true;
-    const i=order[k];
-    for(const g of qualGroups){if(!used.has(g)&&slotSets[i].includes(g)){used.add(g);res[i]=g;if(bt(k+1))return true;used.delete(g);res[i]=null;}}
-    return false;
-  }
-  if(!bt(0)){const free=qualGroups.filter(g=>!used.has(g));for(let i=0;i<8;i++)if(!res[i])res[i]=free.pop();}
-  return res;
-}
-const THIRD_SLOTS=R32.filter(m=>m[2].startsWith("3_")).map(m=>m[2].slice(2).split(""));
 
-// ================= SIMULACIÓN =================
-let agg=null;
-function simulate(N){
-  const t0=performance.now();
-  const stat={};Object.keys(T).forEach(t=>stat[t]={p1:0,p2:0,p3q:0,r32:0,r16:0,qf:0,sf:0,fin:0,ch:0,xp:0});
-  const matchup={},koWinCount={};KO_ALL.forEach(m=>{matchup[m[0]]={};koWinCount[m[0]]={};});
+// ================= WORKER =================
+let agg=null,worker=null,simBusy=false,simQueued=false;
+function buildWorker(){
+  try{
+    const fns=[homeBonus,lambdas,scoreMatrix,matchProbs,samplePoisson,sampleScore,eloDelta,drawSendsBoth,inflateDraw,sampleScoreOutcome,rankGroup,assignThirds,simulateCore];
+    const code=`"use strict";
+const {BASE,CC,SS,RHO,MAXG,DRAW_BOOST,W_MKT}=${JSON.stringify(CONSTS)};
+${fns.map(f=>f.toString()).join("\n")}
+onmessage=function(e){postMessage(simulateCore(e.data));};`;
+    return new Worker(URL.createObjectURL(new Blob([code],{type:"text/javascript"})));
+  }catch(e){return null;}
+}
+worker=buildWorker();
+
+function simPayload(N){
   const baseElo=liveElo();
-  const gdone=groupsComplete();
   const ovCache={};
   for(const m of GM){if(odds[m.id]&&!results[m.id])
     ovCache[m.id]=blendMarket(odds[m.id],baseElo[m.h]+homeBonus(m.h,"G"),baseElo[m.a]+homeBonus(m.a,"G"));}
-  for(let n=0;n<N;n++){
-    const elo={...baseElo};
-    const firsts={},seconds={},thirdRows=[];
-    for(const g in GROUPS){
-      const tg=GROUPS[g],pts={},gd={},gf={};
-      tg.forEach(t=>{pts[t]=0;gd[t]=0;gf[t]=0;});
-      let ptsSnap=null;
-      for(const m of GM){if(m.g!==g)continue;
-        if(m.md===3&&!ptsSnap)ptsSnap={...pts};
-        let a,b;
-        if(results[m.id]){[a,b]=results[m.id];}
-        else{
-          const eH=elo[m.h]+homeBonus(m.h,"G"),eA=elo[m.a]+homeBonus(m.a,"G");
-          const [lA,lB]=lambdas(eH,eA);
-          let ov=ovCache[m.id]||null;
-          if(!ov&&m.md===3&&ptsSnap[m.h]>=4&&ptsSnap[m.a]>=4){
-            const oth=tg.filter(t=>t!==m.h&&t!==m.a);
-            if(drawSendsBoth(ptsSnap[m.h],ptsSnap[m.a],ptsSnap[oth[0]],ptsSnap[oth[1]]))
-              ov=inflateDraw(matchProbs(eH,eA));
-          }
-          [a,b]=ov?sampleScoreOutcome(lA,lB,ov):sampleScore(lA,lB);
-          const d=eloDelta(eH,eA,a,b);
-          elo[m.h]+=d;elo[m.a]-=d;
-        }
-        pts[m.h]+=a>b?3:(a===b?1:0);pts[m.a]+=b>a?3:(a===b?1:0);
-        gd[m.h]+=a-b;gd[m.a]+=b-a;gf[m.h]+=a;gf[m.a]+=b;
-      }
-      const rk=rankGroup(tg,pts,gd,gf);
-      firsts[g]=rk[0];seconds[g]=rk[1];
-      stat[rk[0]].p1++;stat[rk[1]].p2++;
-      tg.forEach(t=>stat[t].xp+=pts[t]);
-      thirdRows.push([g,rk[2],pts[rk[2]],gd[rk[2]],gf[rk[2]]]);
-    }
-    thirdRows.sort((x,y)=>y[2]-x[2]||y[3]-x[3]||y[4]-x[4]||Math.random()-0.5);
-    const qual3=thirdRows.slice(0,8).map(r=>r[0]);
-    const thirdTeam={};thirdRows.slice(0,8).forEach(r=>{thirdTeam[r[0]]=r[1];stat[r[1]].p3q++;});
-    const amap=assignThirds(qual3,THIRD_SLOTS);
-    const entrants={};
-    let si=0;
-    for(const [mid,s1,s2] of R32){
-      const resolve=s=>{
-        if(s[0]==="W")return firsts[s[2]];
-        if(s[0]==="R")return seconds[s[2]];
-        return thirdTeam[amap[si++]];
-      };
-      const tA=resolve(s1),tB=resolve(s2);
-      entrants[mid]=[tA,tB];
-      stat[tA].r32++;stat[tB].r32++;
-      const key=tA+"|"+tB;matchup[mid][key]=(matchup[mid][key]||0)+1;
-    }
-    const winners={};
-    const playKO=(mid,tA,tB)=>{
-      const st=STAGE_OF[mid];
-      const kr=gdone&&koResults[mid];
-      let a,b,w;
-      if(kr){a=kr.a;b=kr.b;w=a>b?tA:(b>a?tB:(kr.pen===0?tA:tB));}
-      else{
-        const eA=elo[tA]+homeBonus(tA,st),eB=elo[tB]+homeBonus(tB,st);
-        const [lA,lB]=lambdas(eA,eB);
-        [a,b]=sampleScore(lA,lB);
-        if(a===b){const we=1/(1+Math.pow(10,-(eA-eB)/400));w=Math.random()<(0.5+0.35*(we-0.5))?tA:tB;}
-        else w=a>b?tA:tB;
-      }
-      const d=eloDelta(elo[tA],elo[tB],a,b);elo[tA]+=d;elo[tB]-=d;
-      winners[mid]=w;koWinCount[mid][w]=(koWinCount[mid][w]||0)+1;
-      return w;
-    };
-    for(const [mid] of R32)playKO(mid,entrants[mid][0],entrants[mid][1]);
-    for(const [rnd,key] of [[R16,"r16"],[QF,"qf"],[SF,"sf"]]){
-      for(const [mid,p1,p2] of rnd){
-        const tA=winners[p1],tB=winners[p2];
-        stat[tA][key]++;stat[tB][key]++;
-        const k2=tA+"|"+tB;matchup[mid][k2]=(matchup[mid][k2]||0)+1;
-        playKO(mid,tA,tB);
-      }
-    }
-    const fA=winners["M101"],fB=winners["M102"];
-    stat[fA].fin++;stat[fB].fin++;
-    const k3=fA+"|"+fB;matchup["M104"][k3]=(matchup["M104"][k3]||0)+1;
-    const ch=playKO("M104",fA,fB);
-    stat[ch].ch++;
-  }
-  for(const t in stat){const s=stat[t];s.p1/=N;s.p2/=N;s.p3q/=N;s.r32/=N;s.r16/=N;s.qf/=N;s.sf/=N;s.fin/=N;s.ch/=N;s.xp/=N;}
-  agg={stat,matchup,koWinCount,N,ms:Math.round(performance.now()-t0)};
+  return {N,baseElo,results,koResults,ovCache,gdone:groupsComplete(),GROUPS,GM,R32,R16,QF,SF,STAGE_OF,THIRD_SLOTS};
 }
 
 // ================= PRODE (doble) =================
-// EV genérico: pick (i,j) vale ptsOut si acierta resultado + ptsBonus extra si exacto.
-// MP: out=3, bonus=mpExact-mpOut (exacto reemplaza). Amigos: out=2, bonus=1.
 function prodePicksDual(eA,eB,ov){
-  const [lA,lB]=lambdas(eA,eB);
-  let M=scoreMatrix(lA,lB);
+  const lab=lambdas(eA,eB);
+  let M=scoreMatrix(lab[0],lab[1]);
   let P1=0,PX=0,P2=0;
   for(let i=0;i<=MAXG;i++)for(let j=0;j<=MAXG;j++){if(i>j)P1+=M[i][j];else if(i===j)PX+=M[i][j];else P2+=M[i][j];}
   if(ov){
@@ -499,30 +541,64 @@ function prodePicksDual(eA,eB,ov){
 function nameToInternal(n){return ESPN_NAMES[n]||null;}
 function pairKey(a,b){return [a,b].sort().join("|");}
 const GM_BY_PAIR={};GM.forEach(m=>GM_BY_PAIR[pairKey(m.h,m.a)]=m);
-let lastSync=null;
+let lastSync=null,lastSyncInfo="";
+const API_URL="/api/wc";
+const ESPN_DIRECT="https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260719&limit=200";
 
+function amToDec(am){const n=parseFloat(String(am).replace("+",""));if(!isFinite(n)||n===0)return null;return n>0?1+n/100:1+100/Math.abs(n);}
+function parseESPN(data){ // mismo parser que api/wc.js (fallback directo)
+  const out=[];
+  for(const ev of data.events||[]){
+    const comp=(ev.competitions||[])[0];if(!comp)continue;
+    const cs=comp.competitors||[];
+    const home=cs.find(c=>c.homeAway==="home"),away=cs.find(c=>c.homeAway==="away");
+    if(!home||!away)continue;
+    const st=(comp.status&&comp.status.type)||{};
+    let oddsOut=null;
+    const o=(comp.odds||[])[0];
+    if(o&&o.moneyline){
+      const pick=side=>{const s=o.moneyline[side];if(!s)return null;const v=(s.close&&s.close.odds)||(s.open&&s.open.odds);return v!=null?amToDec(v):null;};
+      const h=pick("home"),d=pick("draw"),a=pick("away");
+      if(h&&d&&a)oddsOut={h,d,a};
+    }
+    out.push({date:ev.date,stage:(ev.season&&ev.season.slug)||"",home:home.team&&home.team.displayName,away:away.team&&away.team.displayName,
+      homeScore:home.score!=null?parseInt(home.score,10):null,awayScore:away.score!=null?parseInt(away.score,10):null,
+      homeWinner:!!home.winner,awayWinner:!!away.winner,state:st.state||"pre",completed:!!st.completed,odds:oddsOut});
+  }
+  return out;
+}
+async function fetchMatches(){
+  try{
+    const r=await fetch(API_URL,{signal:AbortSignal.timeout?AbortSignal.timeout(9000):undefined});
+    const data=await r.json();
+    if(data.ok&&data.matches.length)return data.matches;
+    throw new Error(data.error||"API vacía");
+  }catch(e){
+    const r2=await fetch(ESPN_DIRECT,{signal:AbortSignal.timeout?AbortSignal.timeout(9000):undefined});
+    if(!r2.ok)throw new Error("ESPN directo "+r2.status);
+    return parseESPN(await r2.json());
+  }
+}
 async function syncESPN(manual){
   const btn=document.getElementById("sync");
   btn.className="busy";document.getElementById("synctxt").textContent="Sincronizando…";
   try{
-    const r=await fetch("/api/wc");
-    const data=await r.json();
-    if(!data.ok)throw new Error(data.error||"sin datos");
+    const matches=await fetchMatches();
     let nRes=0,nOdds=0,nKO=0;
-    // cruces KO definidos (para mapear resultados de eliminatorias)
     const koPair={};
     if(agg&&groupsComplete()){
-      for(const [mid] of KO_ALL){
+      for(const m of KO_ALL){
+        const mid=m[0];
         const top=Object.entries(agg.matchup[mid]||{}).sort((a,b)=>b[1]-a[1])[0];
-        if(top&&top[1]/agg.N>0.999){const [x,y]=top[0].split("|");koPair[pairKey(x,y)]=mid;}
+        if(top&&top[1]/agg.N>0.999){const xy=top[0].split("|");koPair[pairKey(xy[0],xy[1])]=mid;}
       }
     }
-    for(const ev of data.matches){
+    for(const ev of matches){
       const h=nameToInternal(ev.home),a=nameToInternal(ev.away);
       if(!h||!a)continue;
       const m=GM_BY_PAIR[pairKey(h,a)];
       if(m&&ev.stage==="group-stage"){
-        const swap=(m.h!==h); // ESPN home != nuestro "local" de fixture
+        const swap=(m.h!==h);
         if(ev.completed&&ev.homeScore!=null&&ev.awayScore!=null){
           const val=swap?[ev.awayScore,ev.homeScore]:[ev.homeScore,ev.awayScore];
           if(!results[m.id]||results[m.id][0]!==val[0]||results[m.id][1]!==val[1]){results[m.id]=val;nRes++;}
@@ -534,7 +610,7 @@ async function syncESPN(manual){
         const mid=koPair[pairKey(h,a)];
         if(mid){
           const top=Object.entries(agg.matchup[mid]).sort((x,y)=>y[1]-x[1])[0][0].split("|");
-          const tA=top[0]; // orden interno de la llave
+          const tA=top[0];
           const va=(tA===h)?ev.homeScore:ev.awayScore;
           const vb=(tA===h)?ev.awayScore:ev.homeScore;
           let pen=0;
@@ -544,15 +620,15 @@ async function syncESPN(manual){
       }
     }
     lastSync=new Date();
+    lastSyncInfo=`ESPN ✓ ${lastSync.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})} · ${nRes} result., ${nOdds} cuotas${nKO?`, ${nKO} llaves`:""}`;
     save();
     btn.className="ok";document.getElementById("synctxt").textContent="Al día";
-    document.getElementById("substatus").textContent=
-      `ESPN ✓ ${lastSync.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})} · ${nRes} resultados, ${nOdds} cuotas${nKO?`, ${nKO} llaves`:""} actualizados`;
-    runAll(true);
+    runAll();
   }catch(e){
     btn.className="err";document.getElementById("synctxt").textContent="Reintentar";
-    document.getElementById("substatus").textContent="No pude leer ESPN ("+e.message+"). Podés cargar todo a mano.";
-    if(manual===undefined)runAll(true);
+    lastSyncInfo="ESPN sin conexión — modo manual";
+    if(manual)toast("No pude leer ESPN: "+(e&&e.message||e));
+    runAll();
   }
 }
 
@@ -560,12 +636,31 @@ async function syncESPN(manual){
 const $=s=>document.querySelector(s);
 function pct(x,d=1){return (100*x).toFixed(d)+"%";}
 let currentElo={},activeGroup="A",activeGroupP="A";
+const openOdds=new Set();
+let toastTimer=null;
+function toast(msg){
+  const el=$("#toast");el.textContent=msg;el.classList.add("show");
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),3200);
+}
+function statline(extra){
+  const parts=[];
+  if(agg)parts.push(`${agg.N.toLocaleString("es")} sims · ${(agg.ms/1000).toFixed(1)} s`);
+  if(lastSyncInfo)parts.push(lastSyncInfo);
+  parts.push(`${Object.keys(results).length}/72 result. · ${Object.keys(odds).length} cuotas`);
+  if(extra)parts.push(extra);
+  $("#statline").textContent=parts.join("  ·  ");
+}
+function typingGuard(){
+  const el=document.activeElement;
+  return el&&(el.tagName==="INPUT")&&el.closest("main");
+}
 
 function groupSelector(elId,active,cb){
   const el=document.getElementById(elId);el.innerHTML="";
   for(const g of Object.keys(GROUPS)){
     const b=document.createElement("button");
-    b.textContent=g;if(g===active)b.className="active";
+    b.textContent=g;b.setAttribute("role","tab");
+    if(g===active){b.className="active";b.setAttribute("aria-selected","true");}
     b.onclick=()=>cb(g);
     el.appendChild(b);
   }
@@ -584,37 +679,42 @@ function renderPartidos(){
     const p=matchProbs(eH,eA);
     const ef=effectiveProbs(m,eH,eA);
     let w=p.w,d=p.d,l=p.l,tag="";
-    if(ef.ov){[w,d,l]=ef.ov;tag=`<span class="mtag">📊 ${ef.src}</span>`;}
+    if(ef.ov){w=ef.ov[0];d=ef.ov[1];l=ef.ov[2];tag=`<span class="mtag">📊 ${ef.src}</span>`;}
     const o=odds[m.id];
     html+=`<div class="match">
       <div class="mrow">
-        <div class="team"><span class="fl">${T[m.h].flag}</span><span class="nm">${m.h}</span><span class="elo">${Math.round(currentElo[m.h])}</span></div>
+        <div class="team">${flagHTML(m.h)}<span class="nm">${m.h}</span><span class="elo">${Math.round(currentElo[m.h])}</span></div>
         <div class="scores">
-          <input type="number" inputmode="numeric" min="0" max="15" id="${m.id}h" value="${r?r[0]:""}" class="${r?'entered':''}" placeholder="·">
+          <input type="number" inputmode="numeric" min="0" max="15" id="${m.id}h" value="${r?r[0]:""}" class="${r?'entered':''}" placeholder="·" aria-label="Goles ${m.h}">
           <span style="color:var(--muted)">–</span>
-          <input type="number" inputmode="numeric" min="0" max="15" id="${m.id}a" value="${r?r[1]:""}" class="${r?'entered':''}" placeholder="·">
+          <input type="number" inputmode="numeric" min="0" max="15" id="${m.id}a" value="${r?r[1]:""}" class="${r?'entered':''}" placeholder="·" aria-label="Goles ${m.a}">
         </div>
-        <div class="team right"><span class="fl">${T[m.a].flag}</span><span class="nm">${m.a}</span><span class="elo">${Math.round(currentElo[m.a])}</span></div>
+        <div class="team right">${flagHTML(m.a)}<span class="nm">${m.a}</span><span class="elo">${Math.round(currentElo[m.a])}</span></div>
       </div>
       <div class="minfo">
         <span class="mdate">J${m.md} · ${m.date}</span>
-        <div class="probbar"><div style="width:${100*w}%"></div><div style="width:${100*d}%"></div><div style="width:${100*l}%"></div></div>
+        <div class="probbar" role="img" aria-label="1 ${pct(w,0)}, empate ${pct(d,0)}, 2 ${pct(l,0)}"><div style="width:${100*w}%"></div><div style="width:${100*d}%"></div><div style="width:${100*l}%"></div></div>
         <span class="ptxt">${pct(w,0)} · ${pct(d,0)} · ${pct(l,0)}</span>
         ${tag}
-        <button class="oddstoggle" data-m="${m.id}">cuotas</button>
+        <button class="oddstoggle" data-m="${m.id}" aria-expanded="${openOdds.has(m.id)}">cuotas</button>
       </div>
-      <div class="oddsrow" id="or${m.id}">
+      <div class="oddsrow ${openOdds.has(m.id)?'open':''}" id="or${m.id}">
         <span>1X2:</span>
-        <input id="${m.id}o1" placeholder="1" value="${o?o[0]:""}" class="${o?'on':''}">
-        <input id="${m.id}ox" placeholder="X" value="${o?o[1]:""}" class="${o?'on':''}">
-        <input id="${m.id}o2" placeholder="2" value="${o?o[2]:""}" class="${o?'on':''}">
+        <input id="${m.id}o1" placeholder="1" value="${o?o[0]:""}" class="${o?'on':''}" aria-label="Cuota local">
+        <input id="${m.id}ox" placeholder="X" value="${o?o[1]:""}" class="${o?'on':''}" aria-label="Cuota empate">
+        <input id="${m.id}o2" placeholder="2" value="${o?o[2]:""}" class="${o?'on':''}" aria-label="Cuota visitante">
         <span>decimales</span>
       </div>
     </div>`;
   }
   card.innerHTML=html;wrap.appendChild(card);
   wrap.querySelectorAll(".oddstoggle").forEach(b=>{
-    b.onclick=()=>document.getElementById("or"+b.dataset.m).classList.toggle("open");
+    b.onclick=()=>{
+      const id=b.dataset.m;
+      if(openOdds.has(id))openOdds.delete(id);else openOdds.add(id);
+      document.getElementById("or"+id).classList.toggle("open");
+      b.setAttribute("aria-expanded",openOdds.has(id));
+    };
   });
   wrap.querySelectorAll("input").forEach(inp=>{
     inp.addEventListener("change",()=>{
@@ -627,6 +727,7 @@ function renderPartidos(){
         if(v1&&vx&&v2){
           const arr=[parseFloat(v1),parseFloat(vx),parseFloat(v2)];
           if(arr.every(x=>isFinite(x)&&x>=1.01&&x<1001)){odds[id]=arr;save();runAll();}
+          else toast("Cuotas inválidas: usá decimales ≥ 1.01");
         } else if(!v1&&!vx&&!v2&&odds[id]){delete odds[id];save();runAll();}
         return;
       }
@@ -655,7 +756,7 @@ function renderProde(){
     const pk=prodePicksDual(eH,eA,ef.ov);
     const dMP=pk.mp.best.ev-pk.mp.alt.ev, dAM=pk.am.best.ev-pk.am.alt.ev;
     html+=`<div class="match" ${played?'style="opacity:.45"':''}>
-      <div style="font-size:13px;font-weight:700">${T[m.h].flag} ${m.h} – ${m.a} ${T[m.a].flag}
+      <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${flagHTML(m.h)} ${m.h} – ${m.a} ${flagHTML(m.a)}
         ${ef.ov?'<span class="mtag">📊</span>':''} <span class="mdate">J${m.md} · ${m.date}</span>
         ${played?`<span class="mdate">(jugado ${played[0]}-${played[1]})</span>`:""}</div>
       <div class="pickbox">
@@ -675,19 +776,20 @@ function renderProde(){
     </div>`;
   }
   card.innerHTML=html;wrap.appendChild(card);
-  // KO definidas
   if(groupsComplete()&&agg){
     const card2=document.createElement("div");card2.className="card";
     let h2=`<h3>Eliminatorias definidas</h3>`;
     let any=false;
-    for(const [mid] of KO_ALL){
+    for(const mrow of KO_ALL){
+      const mid=mrow[0];
       if(koResults[mid])continue;
       const top=Object.entries(agg.matchup[mid]||{}).sort((a,b)=>b[1]-a[1])[0];
       if(!top||top[1]/agg.N<0.999)continue;
       any=true;
-      const [tA,tB]=top[0].split("|");const st=STAGE_OF[mid];
+      const xy=top[0].split("|"),tA=xy[0],tB=xy[1];
+      const st=STAGE_OF[mid]||"F";
       const pk=prodePicksDual(currentElo[tA]+homeBonus(tA,st),currentElo[tB]+homeBonus(tB,st),null);
-      h2+=`<div class="match"><div style="font-size:13px;font-weight:700">${T[tA].flag} ${tA} – ${tB} ${T[tB].flag} <span class="mdate">${mid.replace("M","P.")}</span></div>
+      h2+=`<div class="match"><div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${flagHTML(tA)} ${tA} – ${tB} ${flagHTML(tB)} <span class="mdate">${mid.replace("M","P.")}</span></div>
         <div class="pickbox">
           <div class="pick"><div class="lbl" style="color:var(--accent)">MP</div><div class="val">${pk.mp.best.i}-${pk.mp.best.j}</div><div class="ev">${pk.mp.best.ev.toFixed(2)} pts</div></div>
           <div class="pick"><div class="lbl" style="color:var(--accent2)">Amigos</div><div class="val">${pk.am.best.i}-${pk.am.best.j}</div><div class="ev">${pk.am.best.ev.toFixed(2)} pts</div></div>
@@ -706,7 +808,7 @@ function renderGrupos(){
     const tg=[...GROUPS[g]].sort((x,y)=>(agg.stat[y].p1+agg.stat[y].p2+agg.stat[y].p3q)-(agg.stat[x].p1+agg.stat[x].p2+agg.stat[x].p3q));
     for(const t of tg){
       const s=agg.stat[t],q=s.p1+s.p2+s.p3q;
-      html+=`<tr><td>${T[t].flag} ${t}</td><td>${s.xp.toFixed(1)}</td><td><span class="tag g1">${pct(s.p1,0)}</span></td><td><span class="tag g2">${pct(s.p2,0)}</span></td><td><span class="tag g3">${pct(s.p3q,0)}</span></td><td><span class="bar" style="width:${Math.round(44*q)}px"></span>${pct(q,0)}</td></tr>`;
+      html+=`<tr><td>${flagHTML(t)} ${t}</td><td>${s.xp.toFixed(1)}</td><td><span class="tag g1">${pct(s.p1,0)}</span></td><td><span class="tag g2">${pct(s.p2,0)}</span></td><td><span class="tag g3">${pct(s.p3q,0)}</span></td><td><span class="bar" style="width:${Math.round(44*q)}px"></span>${pct(q,0)}</td></tr>`;
     }
     card.innerHTML=html+"</table>";wrap.appendChild(card);
   }
@@ -722,23 +824,22 @@ let sortKey="ch";
 function renderCopa(){
   if(!agg)return;
   $("#bracketnote").innerHTML=groupsComplete()
-    ?"✅ Grupos completos: el cuadro está determinado. Resultados de llaves se sincronizan solos (o cargalos a mano; si hay empate, elegí el ganador por penales)."
+    ?"✅ Grupos completos: el cuadro está determinado. Los resultados de llaves se sincronizan solos (o cargalos a mano; si hay empate, elegí el ganador por penales)."
     :"Cuadro proyectado: cruce más probable de cada llave según Monte Carlo. Se fija al completarse los 72 partidos de grupos.";
-  // tabla campeón
   const cols=[["Equipo",null],["Rat.",null],["32avos","r32"],["8vos","r16"],["4tos","qf"],["Semis","sf"],["Final","fin"],["🏆","ch"]];
   const tbl=$("#champtable");
   let html="<tr>"+cols.map(c=>`<th data-k="${c[1]||''}">${c[0]}</th>`).join("")+"</tr>";
   const order=Object.keys(T).sort((x,y)=>agg.stat[y][sortKey]-agg.stat[x][sortKey]||agg.stat[y].ch-agg.stat[x].ch).slice(0,20);
   for(const t of order){
     const s=agg.stat[t];
-    html+=`<tr><td>${T[t].flag} ${t}</td><td>${Math.round(currentElo[t])}</td><td>${pct(s.r32,0)}</td><td>${pct(s.r16,0)}</td><td>${pct(s.qf,0)}</td><td>${pct(s.sf,1)}</td><td>${pct(s.fin,1)}</td><td><b>${pct(s.ch,1)}</b></td></tr>`;
+    html+=`<tr><td>${flagHTML(t)} ${t}</td><td>${Math.round(currentElo[t])}</td><td>${pct(s.r32,0)}</td><td>${pct(s.r16,0)}</td><td>${pct(s.qf,0)}</td><td>${pct(s.sf,1)}</td><td>${pct(s.fin,1)}</td><td><b>${pct(s.ch,1)}</b></td></tr>`;
   }
   tbl.innerHTML=html;
   tbl.querySelectorAll("th").forEach(th=>{th.addEventListener("click",()=>{if(th.dataset.k){sortKey=th.dataset.k;renderCopa();}});});
-  // bracket
   const wrap=$("#bracketview");wrap.innerHTML="";
   const gdone=groupsComplete();
-  for(const [title,rnd] of KO_ROUNDS){
+  for(const pair of KO_ROUNDS){
+    const title=pair[0],rnd=pair[1];
     const div=document.createElement("div");div.className="card";
     let h=`<h3>${title}</h3><div class="ko-grid">`;
     for(const m of rnd){
@@ -747,11 +848,11 @@ function renderCopa(){
       const wins=agg.koWinCount[mid];
       let rows="";
       if(top){
-        const [tA,tB]=top[0].split("|");
+        const xy=top[0].split("|"),tA=xy[0],tB=xy[1];
         const wA=(wins[tA]||0)/agg.N,wB=(wins[tB]||0)/agg.N;
         const kr=koResults[mid];
-        rows=`<div class="ko-row"><span>${T[tA].flag} ${tA}</span><span>${gdone?`<input type="number" inputmode="numeric" min="0" id="${mid}a" value="${kr?kr.a:""}" class="${kr?'entered':''}">`:""} <span class="pct">${pct(wA,0)}</span></span></div>
-        <div class="ko-row"><span>${T[tB].flag} ${tB}</span><span>${gdone?`<input type="number" inputmode="numeric" min="0" id="${mid}b" value="${kr?kr.b:""}" class="${kr?'entered':''}">`:""} <span class="pct">${pct(wB,0)}</span></span></div>`;
+        rows=`<div class="ko-row"><span class="tn">${flagHTML(tA)} ${tA}</span><span>${gdone?`<input type="number" inputmode="numeric" min="0" id="${mid}a" value="${kr?kr.a:""}" class="${kr?'entered':''}" aria-label="Goles ${tA}">`:""} <span class="pct">${pct(wA,0)}</span></span></div>
+        <div class="ko-row"><span class="tn">${flagHTML(tB)} ${tB}</span><span>${gdone?`<input type="number" inputmode="numeric" min="0" id="${mid}b" value="${kr?kr.b:""}" class="${kr?'entered':''}" aria-label="Goles ${tB}">`:""} <span class="pct">${pct(wB,0)}</span></span></div>`;
         if(gdone&&kr&&kr.a===kr.b){
           rows+=`<div class="penwin">Penales: <select id="${mid}p"><option value="0" ${kr.pen===0?"selected":""}>${tA}</option><option value="1" ${kr.pen===1?"selected":""}>${tB}</option></select></div>`;
         }
@@ -779,15 +880,38 @@ function renderCopa(){
   }
 }
 
-function runAll(skipRenderInputsFocus){
-  const N=parseInt($("#nsim").value);
-  setTimeout(()=>{
-    simulate(N);
-    renderPartidos();renderProde();renderGrupos();renderCopa();
-    const nres=Object.keys(results).length;
-    if(!lastSync)document.getElementById("substatus").textContent=
-      `${agg.N.toLocaleString("es")} sims · ${agg.ms} ms · ${nres}/72 resultados · ${Object.keys(odds).length} cuotas`;
-  },20);
+function renderAll(){
+  renderPartidos();renderProde();renderGrupos();renderCopa();
+  statline();
+}
+
+// ================= ORQUESTACIÓN =================
+function runAll(){
+  if(typingGuard()){ // no pisar lo que el usuario está escribiendo
+    const el=document.activeElement;
+    el.addEventListener("blur",()=>runAll(),{once:true});
+    return;
+  }
+  if(simBusy){simQueued=true;return;}
+  simBusy=true;
+  $("#simspin").classList.add("on");
+  statline("simulando…");
+  const N=parseInt($("#nsim").value)||5000;
+  const payload=simPayload(N);
+  const done=res=>{
+    agg=res;
+    simBusy=false;
+    $("#simspin").classList.remove("on");
+    renderAll();
+    if(simQueued){simQueued=false;runAll();}
+  };
+  if(worker){
+    worker.onmessage=e=>done(e.data);
+    worker.onerror=()=>{worker=null;done(simulateCore(payload));};
+    worker.postMessage(payload);
+  } else {
+    setTimeout(()=>done(simulateCore(payload)),20);
+  }
 }
 
 // Tabs
@@ -804,20 +928,26 @@ function bindSettings(){
   $("#setauto").checked=settings.auto;
   $("#mpExact").value=settings.mpExact;$("#mpOut").value=settings.mpOut;
   $("#amOut").value=settings.amOut;$("#amBonus").value=settings.amBonus;
-  $("#setauto").onchange=e=>{settings.auto=e.target.checked;save();};
+  $("#setauto").onchange=e=>{settings.auto=e.target.checked;save();toast(settings.auto?"Auto-sync activado":"Auto-sync desactivado");};
   for(const k of ["mpExact","mpOut","amOut","amBonus"]){
-    $("#"+k).onchange=e=>{settings[k]=parseFloat(e.target.value)||0;save();renderProde();};
+    $("#"+k).onchange=e=>{settings[k]=parseFloat(e.target.value)||0;save();renderProde();toast("Puntajes del prode actualizados");};
   }
+  $("#nsim").onchange=()=>runAll();
 }
-$("#resim").addEventListener("click",()=>runAll());
-$("#clearall").addEventListener("click",()=>{if(confirm("¿Borrar todos los resultados y cuotas cargados?")){results={};koResults={};odds={};save();runAll();}});
+$("#resim").addEventListener("click",()=>{toast("Re-simulando torneo…");runAll();});
+$("#clearall").addEventListener("click",()=>{
+  if(confirm("¿Borrar todos los resultados y cuotas cargados?")){
+    results={};koResults={};odds={};save();toast("Datos borrados");runAll();
+  }
+});
 $("#sync").addEventListener("click",()=>syncESPN(true));
+window.addEventListener("error",e=>{toast("Error: "+(e.message||"desconocido"));});
 
 bindSettings();
-runAll();
-syncESPN();
+syncESPN(); // dispara runAll() al terminar (con o sin éxito)
 setInterval(()=>{if(settings.auto&&document.visibilityState==="visible")syncESPN();},180000);
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&settings.auto)syncESPN();});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&settings.auto&&lastSync&&(Date.now()-lastSync>120000))syncESPN();});
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("/sw.js").catch(()=>{});
 </script>
 </body>
 </html>

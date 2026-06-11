@@ -51,10 +51,14 @@ function parseScoreboard(data) {
 
 module.exports = async (req, res) => {
   try {
-    const dates = (req.query && req.query.dates) || "20260611-20260719";
+    let dates = (req.query && req.query.dates) || "20260611-20260719";
+    if (!/^\d{8}(-\d{8})?$/.test(dates)) dates = "20260611-20260719"; // validación
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
     const r = await fetch(`${ESPN}?dates=${encodeURIComponent(dates)}&limit=200`, {
-      headers: { "User-Agent": "Mozilla/5.0 (prode-mundial-2026)" }
-    });
+      headers: { "User-Agent": "Mozilla/5.0 (prode-mundial-2026)" },
+      signal: ctrl.signal
+    }).finally(() => clearTimeout(timer));
     if (!r.ok) throw new Error("ESPN " + r.status);
     const data = await r.json();
     const matches = parseScoreboard(data);
