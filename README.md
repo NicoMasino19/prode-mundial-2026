@@ -32,11 +32,8 @@ Cada `git push` re-deploya solo.
 - **Resultados**: la app consulta `/api/wc` (proxy a ESPN) al abrir y cada 3 minutos.
   Los partidos terminados se cargan solos (incluido ganador por penales en eliminatorias)
   y el modelo recalcula todo.
-- **Cuotas**: para los partidos no jugados, toma la línea 1X2 **más el over/under y el
-  spread** de DraftKings vía ESPN, les quita el margen y los fusiona 80% mercado / 20% modelo.
-  Con O/U y spread se despejan las λ de goles implícitas del mercado, que calibran la
-  distribución de marcadores exactos (clave para los 6 pts del prode MP). En llaves,
-  si ya hay cuotas del cruce, también se usan.
+- **Cuotas**: para los partidos no jugados, toma la línea 1X2 de DraftKings vía ESPN,
+  le quita el margen y la fusiona 80% mercado / 20% modelo.
 - **Manual**: todo sigue siendo editable a mano; si ESPN falla, la app avisa y funciona igual.
 
 ## Estructura
@@ -50,9 +47,7 @@ manifest.json → para instalarla como app en el celular
 ## Modelo (resumen)
 
 Rating 2026 = ensamble de Elo (eloratings.net) + consenso de mercado (cuotas DraftKings,
-método de potencia). Goles por Poisson con λ = 1.20·10^(d̃/1100) y saturación tanh (s=500),
-constantes ajustadas por máxima verosimilitud sobre la fase de grupos de los Mundiales
-1998-2022 (n=336, Elo histórico reconstruido; validado out-of-sample 2018-2022).
-Localía: EE.UU. +100; México +130 (altitud); Canadá +100.
+método de potencia). Goles por Poisson con corrección Dixon-Coles (ρ=−0.10), calibrado
+contra la expectativa Elo. Localía: EE.UU. +100; México +130 (altitud); Canadá +100.
 Fecha 3: empates mutuamente convenientes inflados ×1.75. Eliminatorias con prórroga/penales
 amortiguados. Ratings se actualizan partido a partido (K=60) con los resultados reales.
