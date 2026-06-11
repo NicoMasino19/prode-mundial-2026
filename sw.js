@@ -1,6 +1,6 @@
 // Service worker: shell offline (network-first para el documento y la API,
 // cache-first para estáticos). Versionar CACHE al cambiar la app.
-const CACHE = "prode26-v4";
+const CACHE = "prode26-v3";
 const SHELL = ["/", "/manifest.json"];
 
 self.addEventListener("install", e => {
