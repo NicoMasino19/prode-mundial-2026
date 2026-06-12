@@ -30,6 +30,23 @@ function parseScoreboard(data) {
       };
       const h = pick("home"), d = pick("draw"), a = pick("away");
       if (h && d && a) oddsOut = { h, d, a };
+      // Total (over/under) y spread: mejoran la distribución de marcadores exactos
+      if (oddsOut && o.total && o.total.over && o.total.under) {
+        const co = o.total.over.close || o.total.over.open;
+        const cu = o.total.under.close || o.total.under.open;
+        const line = co && co.line != null ? parseFloat(String(co.line).replace(/[ou]/i, "")) : null;
+        const ov = co && co.odds != null ? amToDec(co.odds) : null;
+        const un = cu && cu.odds != null ? amToDec(cu.odds) : null;
+        if (line != null && isFinite(line) && ov && un) oddsOut.ou = { line, over: ov, under: un };
+      }
+      if (oddsOut && o.pointSpread && o.pointSpread.home && o.pointSpread.away) {
+        const ch = o.pointSpread.home.close || o.pointSpread.home.open;
+        const ca = o.pointSpread.away.close || o.pointSpread.away.open;
+        const line = ch && ch.line != null ? parseFloat(ch.line) : null;
+        const oh = ch && ch.odds != null ? amToDec(ch.odds) : null;
+        const oa = ca && ca.odds != null ? amToDec(ca.odds) : null;
+        if (line != null && isFinite(line) && oh && oa) oddsOut.sp = { line, home: oh, away: oa };
+      }
     }
     out.push({
       id: ev.id,
