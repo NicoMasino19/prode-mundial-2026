@@ -1,0 +1,53 @@
+
+================ CALIBRACIÓN (datos reales StatsBomb) ================
+Partidos usados:            64
+Goles por partido:          2.688  (local 1.578 / visit 1.109)
+xG por partido:             2.941
+Goles por equipo (≈ BASE a Δ0): 1.344
+
+---- Ajuste Dixon-Coles (máxima verosimilitud) ----
+Ventaja de localía (home):  +0.065  (en goles: ×1.067)
+rho (corr. marcadores bajos): +0.180
+
+---- Recomendación para CONSTS en index.html ----
+BASE ≈ 1.34   (actual en la app: 1.25)
+RHO  ≈ +0.18   (actual en la app: -0.05)
+Nota: CC/SS dependen de la escala Elo y se siguen calibrando por backtest;
+      este script valida el NIVEL de goles (BASE) y la correlación (RHO).
+
+---- Fuerza por selección (Dixon-Coles, attack/defense) ----
+Equipo                       ATT     DEF
+France                    +1.786  +0.368
+Argentina                 +1.193  +0.741
+Netherlands               +0.907  +0.673
+Australia                 +0.904  +0.617
+Saudi Arabia              +0.842  +0.167
+England                   +0.783  +1.002
+Iran                      +0.630  -0.736
+Senegal                   +0.618  -0.026
+Ecuador                   +0.362  +0.505
+Spain                     +0.359  +0.202
+Portugal                  +0.259  -0.607
+Germany                   +0.206  -0.420
+Poland                    +0.162  +0.979
+Mexico                    +0.128  +0.885
+Ghana                     +0.017  -1.040
+Croatia                   -0.001  +0.057
+Canada                    -0.022  -1.334
+Costa Rica                -0.096  -1.146
+Serbia                    -0.124  -1.540
+Japan                     -0.239  +0.151
+Denmark                   -0.242  +1.170
+South Korea               -0.257  -0.893
+United States             -0.381  +0.575
+Tunisia                   -0.428  +2.123
+Brazil                    -0.492  +0.208
+Morocco                   -0.534  +0.911
+Switzerland               -0.625  -0.974
+Cameroon                  -0.707  -0.705
+Qatar                     -0.811  -0.165
+Wales                     -1.157  -0.224
+Uruguay                   -1.322  +0.514
+Belgium                   -1.718  +0.227
+
+# Exportado a ratings_wc2022.json
