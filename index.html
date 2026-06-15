@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0b0f14">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Predictor del Mundial 2026: modelo Elo + mercado, simulación Monte Carlo, picks óptimos para tus prodes y resultados/cuotas automáticos.">
+<meta name="description" content="Predictor del Mundial 2026: modelo Elo + mercado, simulación Monte Carlo, picks óptimos para el Prode Levi's (TuProde) y resultados/cuotas automáticos.">
 <meta property="og:title" content="Prode Mundial 2026">
-<meta property="og:description" content="Predicciones del Mundial 2026 con modelo Elo + mercado. Picks óptimos para tu prode, resultados y cuotas en automático.">
+<meta property="og:description" content="Predicciones del Mundial 2026 con modelo Elo + mercado. Picks óptimos para el Prode Levi's (TuProde), resultados y cuotas en automático.">
 <meta property="og:type" content="website">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -140,7 +140,7 @@ nav button.active{color:var(--accent)}
 </div>
 
 <div id="tab-prode" class="hidden">
-  <div class="note"><b>Pick óptimo para tus dos prodes.</b> <span style="color:var(--accent)">MP</span> = Mercado Pago (exacto 6 / resultado 3) · <span style="color:var(--accent2)">AM</span> = amigos (ganador 2 + 1 extra por exacto). Cada uno maximiza sus puntos esperados — a veces difieren. Borde amarillo = buen lugar para diferenciarte (la alternativa pierde &lt;0.08 pts esp.). Debajo de cada pick: 2° y 3° mejor marcador con sus pts esperados, y la mejor alternativa con otro resultado (1/X/2). Puntajes editables en Más → Ajustes.</div>
+  <div class="note"><b>Pick óptimo para el Prode Levi's (TuProde).</b> Cada marcador maximiza los puntos esperados según la tabla oficial: <b>12</b> exacto · <b>7</b> ganador/empate + goles de un equipo · <b>5</b> ganador/empate sin goles · <b>2</b> goles de un equipo sin acertar ganador · <b>0</b> nada. Borde amarillo = buen lugar para diferenciarte (la mejor alternativa con otro 1/X/2 pierde &lt;0.30 pts esp.). Debajo de cada pick: 2° y 3° mejor marcador con sus pts esperados, y la mejor alternativa con otro resultado (1/X/2). Puntajes editables en Más → Ajustes.</div>
   <div class="gsel" id="gselp" role="tablist" aria-label="Grupos del prode"></div>
   <div id="prodecards"></div>
 </div>
@@ -162,10 +162,10 @@ nav button.active{color:var(--accent)}
     <div class="setrow"><span>Sincronización automática (ESPN)</span><label class="switch"><input type="checkbox" id="setauto" checked><span class="slider" aria-hidden="true"></span></label></div>
     <div class="setrow"><label for="nsim">Simulaciones por corrida</label>
       <select id="nsim"><option value="2000">2.000</option><option value="5000" selected>5.000</option><option value="20000">20.000</option></select></div>
-    <div class="setrow"><label for="mpExact">Prode MP: pts marcador exacto (total)</label><input type="number" id="mpExact" value="6"></div>
-    <div class="setrow"><label for="mpOut">Prode MP: pts solo resultado</label><input type="number" id="mpOut" value="3"></div>
-    <div class="setrow"><label for="amOut">Prode amigos: pts ganador/empate</label><input type="number" id="amOut" value="2"></div>
-    <div class="setrow"><label for="amBonus">Prode amigos: pts extra por exacto</label><input type="number" id="amBonus" value="1"></div>
+    <div class="setrow"><label for="lvExact">Prode Levi's: pts marcador exacto</label><input type="number" id="lvExact" value="12"></div>
+    <div class="setrow"><label for="lvOutGoals">Prode Levi's: pts ganador/empate + goles de un equipo</label><input type="number" id="lvOutGoals" value="7"></div>
+    <div class="setrow"><label for="lvOut">Prode Levi's: pts ganador/empate (sin goles)</label><input type="number" id="lvOut" value="5"></div>
+    <div class="setrow"><label for="lvGoals">Prode Levi's: pts goles de un equipo (sin ganador)</label><input type="number" id="lvGoals" value="2"></div>
     <div class="setrow"><label for="wMkt">Peso del mercado vs modelo (0.50–0.95)</label><input type="number" id="wMkt" step="0.05" min="0.5" max="0.95" value="0.8"></div>
     <div class="setrow"><label for="kFactor">Factor K · volatilidad del Elo (30–90)</label><input type="number" id="kFactor" step="5" min="30" max="90" value="60"></div>
     <div class="controls">
@@ -526,7 +526,7 @@ function simulateCore(P){
 
 // ================= ESTADO =================
 let results={},koResults={},odds={},mkts={},koOdds={};
-let settings={auto:true,mpExact:6,mpOut:3,amOut:2,amBonus:1,wMkt:0.8,kFactor:60};
+let settings={auto:true,lvExact:12,lvOutGoals:7,lvOut:5,lvGoals:2,wMkt:0.8,kFactor:60};
 try{const s=localStorage.getItem("prode26");if(s){const o=JSON.parse(s);results=o.results||{};koResults=o.koResults||{};odds=o.odds||{};mkts=o.mkts||{};koOdds=o.koOdds||{};Object.assign(settings,o.settings||{});}}catch(e){}
 function save(){try{localStorage.setItem("prode26",JSON.stringify({results,koResults,odds,mkts,koOdds,settings}));}catch(e){}}
 
@@ -611,30 +611,38 @@ function simPayload(N){
   return {N,baseElo,results,koResults,ovCache,lamCache,koLam,kFactor:settings.kFactor||60,gdone:groupsComplete(),GROUPS,GM,R32,R16,QF,SF,STAGE_OF,THIRD_SLOTS};
 }
 
-// ================= PRODE (doble) =================
-function prodePicksDual(eA,eB,ov,lam){
+// ================= PRODE (Levi's / TuProde) =================
+// Tabla oficial TuProde para una predicción (pi,pj) ante un resultado real (ri,rj):
+//   12 → marcador exacto
+//    7 → acertar ganador/empate + la cantidad de goles de un equipo
+//    5 → acertar ganador/empate, sin acertar goles de ningún equipo
+//    2 → errar el ganador pero acertar los goles de uno de los equipos
+//    0 → sin aciertos
+function levisPts(pi,pj,ri,rj){
+  if(pi===ri&&pj===rj)return settings.lvExact;            // exacto
+  const po=Math.sign(pi-pj),ro=Math.sign(ri-rj);          // 1/X/2 de cada uno
+  const goals=(pi===ri)||(pj===rj);                       // ¿acertó goles de algún equipo?
+  if(po===ro)return goals?settings.lvOutGoals:settings.lvOut;
+  return goals?settings.lvGoals:0;
+}
+function prodePickLevis(eA,eB,ov,lam){
   const lab=lam||lambdas(eA,eB); // λ implícitas del mercado si existen (forma del marcador)
   let M=scoreMatrix(lab[0],lab[1]);
-  let P1=0,PX=0,P2=0;
-  for(let i=0;i<=MAXG;i++)for(let j=0;j<=MAXG;j++){if(i>j)P1+=M[i][j];else if(i===j)PX+=M[i][j];else P2+=M[i][j];}
-  if(ov){
+  if(ov){ // re-pesa la matriz de marcadores al 1X2 del mercado (suma por zona = ov)
+    let P1=0,PX=0,P2=0;
+    for(let i=0;i<=MAXG;i++)for(let j=0;j<=MAXG;j++){if(i>j)P1+=M[i][j];else if(i===j)PX+=M[i][j];else P2+=M[i][j];}
     const f1=ov[0]/Math.max(P1,1e-9),fx=ov[1]/Math.max(PX,1e-9),f2=ov[2]/Math.max(P2,1e-9);
     M=M.map((row,i)=>row.map((v,j)=>v*(i>j?f1:(i===j?fx:f2))));
-    P1=ov[0];PX=ov[1];P2=ov[2];
   }
-  const pout=(i,j)=>i>j?P1:(i===j?PX:P2);
-  const mk=(po,pb)=>{
-    const list=[];
-    for(let i=0;i<=6;i++)for(let j=0;j<=6;j++)
-      list.push({i,j,ev:po*pout(i,j)+pb*M[i][j],out:i>j?"1":(i===j?"X":"2")});
-    list.sort((a,b)=>b.ev-a.ev);
-    return {best:list[0],alt:list.find(x=>x.out!==list[0].out),top:list.slice(0,3)};
-  };
-  return {
-    mp:mk(settings.mpOut, Math.max(0,settings.mpExact-settings.mpOut)),
-    am:mk(settings.amOut, settings.amBonus),
-    P1,PX,P2
-  };
+  // Para cada marcador candidato (0..6) se evalúan los pts esperados sobre toda la grilla real.
+  const list=[];
+  for(let pi=0;pi<=6;pi++)for(let pj=0;pj<=6;pj++){
+    let ev=0;
+    for(let ri=0;ri<=MAXG;ri++)for(let rj=0;rj<=MAXG;rj++)ev+=M[ri][rj]*levisPts(pi,pj,ri,rj);
+    list.push({i:pi,j:pj,ev,out:pi>pj?"1":(pi===pj?"X":"2")});
+  }
+  list.sort((a,b)=>b.ev-a.ev);
+  return {best:list[0],alt:list.find(x=>x.out!==list[0].out),top:list.slice(0,3)};
 }
 
 // ================= AUTO-SYNC ESPN =================
@@ -902,26 +910,19 @@ function renderProde(){
     const played=results[m.id];
     const eH=currentElo[m.h]+homeBonus(m.h,"G"),eA=currentElo[m.a]+homeBonus(m.a,"G");
     const ef=effectiveProbs(m,eH,eA);
-    const pk=prodePicksDual(eH,eA,ef.ov,ef.lam);
-    const dMP=pk.mp.best.ev-pk.mp.alt.ev, dAM=pk.am.best.ev-pk.am.alt.ev;
+    const pk=prodePickLevis(eH,eA,ef.ov,ef.lam);
+    const dLV=pk.alt?pk.best.ev-pk.alt.ev:Infinity;
     html+=`<div class="match" ${played?'style="opacity:.45"':''}>
       <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${flagHTML(m.h)} ${m.h} – ${m.a} ${flagHTML(m.a)}
         ${ef.ov?'<span class="mtag">📊</span>':''} <span class="mdate">J${m.md} · ${m.date}</span>
         ${played?`<span class="mdate">(jugado ${played[0]}-${played[1]})</span>`:""}</div>
       <div class="pickbox">
-        <div class="pick ${dMP<0.08?'hot':''}">
-          <div class="lbl" style="color:var(--accent)">MP · ${settings.mpExact}/${settings.mpOut}</div>
-          <div class="val">${pk.mp.best.i}-${pk.mp.best.j}</div>
-          <div class="ev">${pk.mp.best.ev.toFixed(2)} pts esp.</div>
-          <div class="alt">${pk.mp.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div>
-          <div class="alt">alt ${pk.mp.alt.out}: ${pk.mp.alt.i}-${pk.mp.alt.j} (Δ ${dMP.toFixed(2)})</div>
-        </div>
-        <div class="pick ${dAM<0.08?'hot':''}">
-          <div class="lbl" style="color:var(--accent2)">Amigos · ${settings.amOut}+${settings.amBonus}</div>
-          <div class="val">${pk.am.best.i}-${pk.am.best.j}</div>
-          <div class="ev">${pk.am.best.ev.toFixed(2)} pts esp.</div>
-          <div class="alt">${pk.am.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div>
-          <div class="alt">alt ${pk.am.alt.out}: ${pk.am.alt.i}-${pk.am.alt.j} (Δ ${dAM.toFixed(2)})</div>
+        <div class="pick ${dLV<0.30?'hot':''}">
+          <div class="lbl" style="color:var(--accent)">Levi's · óptimo</div>
+          <div class="val">${pk.best.i}-${pk.best.j}</div>
+          <div class="ev">${pk.best.ev.toFixed(2)} pts esp.</div>
+          <div class="alt">${pk.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div>
+          ${pk.alt?`<div class="alt">alt ${pk.alt.out}: ${pk.alt.i}-${pk.alt.j} (Δ ${dLV.toFixed(2)})</div>`:""}
         </div>
       </div>
     </div>`;
@@ -946,11 +947,10 @@ function renderProde(){
         ov2=blendMarket(ko.o,eA2,eB2);
         if(ko.x&&(ko.x.ou||ko.x.sp))lam2=impliedLambdas(ko.o,ko.x,eA2,eB2);
       }
-      const pk=prodePicksDual(eA2,eB2,ov2,lam2);
+      const pk=prodePickLevis(eA2,eB2,ov2,lam2);
       h2+=`<div class="match"><div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${flagHTML(tA)} ${tA} – ${tB} ${flagHTML(tB)} <span class="mdate">${mid.replace("M","P.")}</span></div>
         <div class="pickbox">
-          <div class="pick"><div class="lbl" style="color:var(--accent)">MP</div><div class="val">${pk.mp.best.i}-${pk.mp.best.j}</div><div class="ev">${pk.mp.best.ev.toFixed(2)} pts</div><div class="alt">${pk.mp.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div></div>
-          <div class="pick"><div class="lbl" style="color:var(--accent2)">Amigos</div><div class="val">${pk.am.best.i}-${pk.am.best.j}</div><div class="ev">${pk.am.best.ev.toFixed(2)} pts</div><div class="alt">${pk.am.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div></div>
+          <div class="pick"><div class="lbl" style="color:var(--accent)">Levi's · óptimo</div><div class="val">${pk.best.i}-${pk.best.j}</div><div class="ev">${pk.best.ev.toFixed(2)} pts</div><div class="alt">${pk.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div></div>
         </div></div>`;
     }
     if(any){card2.innerHTML=h2;wrap.appendChild(card2);}
@@ -1084,11 +1084,11 @@ document.querySelectorAll("nav button").forEach(b=>{
 // Ajustes
 function bindSettings(){
   $("#setauto").checked=settings.auto;
-  $("#mpExact").value=settings.mpExact;$("#mpOut").value=settings.mpOut;
-  $("#amOut").value=settings.amOut;$("#amBonus").value=settings.amBonus;
+  $("#lvExact").value=settings.lvExact;$("#lvOutGoals").value=settings.lvOutGoals;
+  $("#lvOut").value=settings.lvOut;$("#lvGoals").value=settings.lvGoals;
   $("#wMkt").value=settings.wMkt;$("#kFactor").value=settings.kFactor;
   $("#setauto").onchange=e=>{settings.auto=e.target.checked;save();toast(settings.auto?"Auto-sync activado":"Auto-sync desactivado");};
-  for(const k of ["mpExact","mpOut","amOut","amBonus"]){
+  for(const k of ["lvExact","lvOutGoals","lvOut","lvGoals"]){
     $("#"+k).onchange=e=>{settings[k]=parseFloat(e.target.value)||0;save();renderProde();toast("Puntajes del prode actualizados");};
   }
   // Knobs del modelo: re-simulan el torneo (afectan la fusión mercado/modelo y la volatilidad del Elo)

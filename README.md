@@ -1,12 +1,17 @@
-# ⚽ Prode Mundial 2026
+# ⚽ Prode Mundial 2026 — Levi's (TuProde)
 
 App de predicciones del Mundial 2026 (Canadá · México · EE.UU.) con modelo Elo + mercado,
-simulación Monte Carlo, **resultados y cuotas automáticos** (API pública de ESPN) y
-picks óptimos para dos prodes:
+simulación Monte Carlo, **resultados y cuotas automáticos** (API pública de ESPN) y el
+**marcador óptimo para el Prode Levi's (TuProde)** según su tabla oficial de puntos:
 
-- **Prode Mercado Pago**: 6 pts marcador exacto / 3 pts acertar resultado.
-- **Prode amigos**: 2 pts acertar ganador/empate + 1 pt extra por exacto.
+- **12 pts**: marcador exacto.
+- **7 pts**: acertar ganador/empate + la cantidad de goles de un equipo.
+- **5 pts**: acertar ganador/empate, sin acertar goles.
+- **2 pts**: errar el ganador pero acertar los goles de un equipo.
+- **0 pts**: sin aciertos.
 
+Para cada partido la app evalúa todos los marcadores candidatos contra la distribución de
+resultados del modelo y muestra el que **maximiza los puntos esperados**.
 (Los puntajes son configurables desde la pestaña **Más → Ajustes**.)
 
 ## Deploy en Vercel (vía GitHub)
