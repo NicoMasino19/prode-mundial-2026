@@ -58,6 +58,8 @@ main{max-width:760px;margin:0 auto;padding:14px 12px 30px}
 .scores input.entered{border-color:var(--green);color:var(--green)}
 .minfo{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;flex-wrap:wrap}
 .probbar{display:flex;flex:1;min-width:110px;height:6px;border-radius:4px;overflow:hidden;background:#0f141b}
+.mhd{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.problbl{display:flex;justify-content:space-between;font-size:9.5px;color:var(--muted);margin-top:3px}
 .probbar div:nth-child(1){background:var(--green)}.probbar div:nth-child(2){background:var(--draw)}.probbar div:nth-child(3){background:var(--red)}
 .ptxt{font-size:10.5px;color:var(--muted);white-space:nowrap}
 .mtag{font-size:10px;color:var(--accent)}
@@ -84,6 +86,9 @@ td:first-child{display:flex;align-items:center;gap:6px}
 .pick.hot{border-color:var(--accent2)}
 .pick.hot .alt{color:var(--accent2)}
 .pick .alt{font-size:10px;color:var(--muted);margin-top:2px}
+.pick .px{font-size:11px;font-weight:600;color:var(--muted)}
+.pick .conf{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.pick .alt.difhot{color:var(--accent2);font-weight:600}
 .ko-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:9px}
 .ko-match{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:9px}
 .ko-match .mlabel{font-size:10px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between;gap:6px}
@@ -140,7 +145,7 @@ nav button.active{color:var(--accent)}
 </div>
 
 <div id="tab-prode" class="hidden">
-  <div class="note"><b>Pick óptimo para tus dos prodes.</b> <span style="color:var(--accent)">MP</span> = Mercado Pago (exacto 6 / resultado 3) · <span style="color:var(--accent2)">AM</span> = amigos (ganador 2 + 1 extra por exacto). Cada uno maximiza sus puntos esperados — a veces difieren. Borde amarillo = buen lugar para diferenciarte (la alternativa pierde &lt;0.08 pts esp.). Debajo de cada pick: 2° y 3° mejor marcador con sus pts esperados, y la mejor alternativa con otro resultado (1/X/2). Puntajes editables en Más → Ajustes.</div>
+  <div class="note"><b>Pick óptimo para tus dos prodes.</b> <span style="color:var(--accent2)">Amigos</span> = ganador 2 + 1 por exacto. <span style="color:var(--accent)">TuProde</span> = exacto 12, ganador/empate 5, +2 por cada equipo cuyos goles acertás. Cada uno maximiza sus propios puntos esperados, así que a veces el marcador óptimo difiere. En <b>eliminatorias</b> el marcador cuenta <b>a 120' (con alargue, sin penales)</b>: por eso hay menos empates y el pick queda más definido. El % es la probabilidad del marcador exacto; la barra muestra ganador/empate/ganador a 120'. Confianza (<span style="color:#2ecc71">● alta</span>/<span style="color:#f1c40f">● media</span>/<span style="color:#e67e22">● pareja</span>) = cuánto se despega del 2° marcador. La línea <b>🎲 dif</b> es la mejor jugada con otro resultado para despegarte del líder, con los pts que resignás (✓ conviene = barato y plausible). Puntajes editables en Más → Ajustes.</div>
   <div class="gsel" id="gselp" role="tablist" aria-label="Grupos del prode"></div>
   <div id="prodecards"></div>
 </div>
@@ -162,10 +167,11 @@ nav button.active{color:var(--accent)}
     <div class="setrow"><span>Sincronización automática (ESPN)</span><label class="switch"><input type="checkbox" id="setauto" checked><span class="slider" aria-hidden="true"></span></label></div>
     <div class="setrow"><label for="nsim">Simulaciones por corrida</label>
       <select id="nsim"><option value="2000">2.000</option><option value="5000" selected>5.000</option><option value="20000">20.000</option></select></div>
-    <div class="setrow"><label for="mpExact">Prode MP: pts marcador exacto (total)</label><input type="number" id="mpExact" value="6"></div>
-    <div class="setrow"><label for="mpOut">Prode MP: pts solo resultado</label><input type="number" id="mpOut" value="3"></div>
     <div class="setrow"><label for="amOut">Prode amigos: pts ganador/empate</label><input type="number" id="amOut" value="2"></div>
     <div class="setrow"><label for="amBonus">Prode amigos: pts extra por exacto</label><input type="number" id="amBonus" value="1"></div>
+    <div class="setrow"><label for="tpExact">TuProde: pts marcador exacto</label><input type="number" id="tpExact" value="12"></div>
+    <div class="setrow"><label for="tpOut">TuProde: pts ganador/empate</label><input type="number" id="tpOut" value="5"></div>
+    <div class="setrow"><label for="tpGoal">TuProde: pts por equipo (goles acertados)</label><input type="number" id="tpGoal" value="2"></div>
     <div class="setrow"><label for="wMkt">Peso del mercado vs modelo (0.50–0.95)</label><input type="number" id="wMkt" step="0.05" min="0.5" max="0.95" value="0.8"></div>
     <div class="setrow"><label for="kFactor">Factor K · volatilidad del Elo (30–90)</label><input type="number" id="kFactor" step="5" min="30" max="90" value="60"></div>
     <div class="controls">
@@ -263,8 +269,9 @@ const STAGE_OF={};R32.forEach(m=>STAGE_OF[m[0]]="R32");R16.forEach(m=>STAGE_OF[m
 // y a los favoritos grandes (85% pred. vs 77% real en Δ250-400). Este set intermedio
 // empata en puntos de prode realizados con el óptimo de verosimilitud (747 vs 738 pts MP
 // en backtest; viejo: 690) pero da picks más variados (menos 1-0 monolítico).
-const CONSTS={BASE:1.25,CC:1100,SS:500,RHO:-0.05,MAXG:12,DRAW_BOOST:1.75,W_MKT:0.8};
-const {BASE,CC,SS,RHO,MAXG,DRAW_BOOST,W_MKT}=CONSTS;
+const CONSTS={BASE:1.25,CC:1100,SS:500,RHO:-0.05,MAXG:12,DRAW_BOOST:1.75,W_MKT:0.8,
+  KO_CAUTION:0.95,ET_SHARE:1/3,ET_CAUT:0.85};
+const {BASE,CC,SS,RHO,MAXG,DRAW_BOOST,W_MKT,KO_CAUTION,ET_SHARE,ET_CAUT}=CONSTS;
 function homeBonus(t,stage){
   if(t==="Estados Unidos")return 100;
   if(t==="México"&&(stage==="G"||stage==="R32"||stage==="R16"))return 130;
@@ -281,6 +288,23 @@ function scoreMatrix(lA,lB){
     M[i].push(v);s+=v;}}
   for(let i=0;i<=MAXG;i++)for(let j=0;j<=MAXG;j++)M[i][j]/=s;
   return M;
+}
+// ---- Marcador de ELIMINATORIA a 120' (incluye alargue, sin penales) ----
+// Toma la matriz de 90' y, sobre los empates (que van a alargue), convoluciona
+// los goles del tiempo extra: ~30' (1/3 del partido) y más cauto (ET_CAUT).
+// Los empates que siguen igualados tras el alargue se definen por penales pero
+// se registran como empate (es lo que cuenta el prode). Resultado: muchos menos
+// empates y un marcador más definido que a los 90'.
+function etPMF(lam){const ETMAX=6,p=[Math.exp(-lam)];for(let k=1;k<=ETMAX;k++)p.push(p[k-1]*lam/k);return p;}
+function ko120Matrix(lA,lB){
+  const M=scoreMatrix(lA,lB),ETMAX=6;
+  const pea=etPMF(lA*ET_SHARE*ET_CAUT),peb=etPMF(lB*ET_SHARE*ET_CAUT);
+  const R=[];for(let i=0;i<=MAXG;i++)R.push(new Array(MAXG+1).fill(0));
+  for(let i=0;i<=MAXG;i++)for(let j=0;j<=MAXG;j++){const p=M[i][j];
+    if(i!==j){R[i][j]+=p;continue;}                       // definido en 90'
+    for(let a=0;a<=ETMAX;a++)for(let b=0;b<=ETMAX;b++){    // va a alargue
+      const ni=Math.min(i+a,MAXG),nj=Math.min(j+b,MAXG);R[ni][nj]+=p*pea[a]*peb[b];}}
+  return R;
 }
 function matchProbs(eA,eB){
   const lab=lambdas(eA,eB),M=scoreMatrix(lab[0],lab[1]);
@@ -410,6 +434,13 @@ function rankGroup(teams,pts,gd,gf){
   return [...teams].sort((x,y)=>pts[y]-pts[x]||gd[y]-gd[x]||gf[y]-gf[x]||(0.5-Math.random()));
 }
 function assignThirds(qualGroups,slotSets){
+  // Tabla oficial FIFA (Anexo C): clave = 8 grupos cuyos terceros clasifican (orden alfabetico);
+  // valor = grupo asignado a cada llave en orden THIRD_SLOTS [M74,M77,M79,M80,M81,M82,M85,M87].
+  if(typeof THIRD_MAP!=="undefined"){
+    const v=THIRD_MAP[[...qualGroups].sort().join("")];
+    if(v)return v.split("");
+  }
+  // Fallback (combinacion inesperada): emparejado valido por backtracking.
   const res=new Array(8).fill(null),used=new Set();
   const order=[...Array(8).keys()].sort((a,b)=>{
     const ca=slotSets[a].filter(g=>qualGroups.includes(g)).length;
@@ -424,6 +455,7 @@ function assignThirds(qualGroups,slotSets){
   return res;
 }
 const THIRD_SLOTS=R32.filter(m=>m[2].startsWith("3_")).map(m=>m[2].slice(2).split(""));
+const THIRD_MAP={"EFGHIJKL":"FGEKIHJL","DFGHIJKL":"DFHKIJGL","DEGHIJKL":"DGEKIHJL","DEFHIJKL":"DFEKIHJL","DEFGIJKL":"DFEKIJGL","DEFGHJKL":"DFEKJHGL","DEFGHIKL":"DFEKIHGL","DEFGHIJL":"DFEIJHGL","DEFGHIJK":"DFEKJHGI","CFGHIJKL":"CFHKIJGL","CEGHIJKL":"CGEKIHJL","CEFHIJKL":"CFEKIHJL","CEFGIJKL":"CFEKIJGL","CEFGHJKL":"CFEKJHGL","CEFGHIKL":"CFEKIHGL","CEFGHIJL":"CFEIJHGL","CEFGHIJK":"CFEKJHGI","CDGHIJKL":"CDHKIJGL","CDFHIJKL":"DFCKIHJL","CDFGIJKL":"DFCKIJGL","CDFGHJKL":"DFCKJHGL","CDFGHIKL":"DFCKIHGL","CDFGHIJL":"DFCIJHGL","CDFGHIJK":"DFCKJHGI","CDEHIJKL":"CDEKIHJL","CDEGIJKL":"CDEKIJGL","CDEGHJKL":"CDEKJHGL","CDEGHIKL":"CDEKIHGL","CDEGHIJL":"CDEIJHGL","CDEGHIJK":"CDEKJHGI","CDEFIJKL":"DFCKEIJL","CDEFHJKL":"DFCKEHJL","CDEFHIKL":"DFCKIHEL","CDEFHIJL":"DFCIEHJL","CDEFHIJK":"DFCKEHJI","CDEFGJKL":"DFCKEJGL","CDEFGIKL":"DFCKEIGL","CDEFGIJL":"DFCIEJGL","CDEFGIJK":"DFCKEJGI","CDEFGHKL":"DFCKEHGL","CDEFGHJL":"DFCEJHGL","CDEFGHJK":"DFCKJHGE","CDEFGHIL":"DFCIEHGL","CDEFGHIK":"DFCKEHGI","CDEFGHIJ":"DFCIJHGE","BFGHIJKL":"FGHKBIJL","BEGHIJKL":"BGEKIHJL","BEFHIJKL":"FHEKBIJL","BEFGIJKL":"FGEKBIJL","BEFGHJKL":"FGEKBHJL","BEFGHIKL":"FHEKBIGL","BEFGHIJL":"FGEIBHJL","BEFGHIJK":"FGEKBHJI","BDGHIJKL":"DGHKBIJL","BDFHIJKL":"DFHKBIJL","BDFGIJKL":"DFIKBJGL","BDFGHJKL":"DFHKBJGL","BDFGHIKL":"DFHKBIGL","BDFGHIJL":"DFHIBJGL","BDFGHIJK":"DFHKBJGI","BDEHIJKL":"DHEKBIJL","BDEGIJKL":"DGEKBIJL","BDEGHJKL":"DGEKBHJL","BDEGHIKL":"DHEKBIGL","BDEGHIJL":"DGEIBHJL","BDEGHIJK":"DGEKBHJI","BDEFIJKL":"DFEKBIJL","BDEFHJKL":"DFEKBHJL","BDEFHIKL":"DFEKBHIL","BDEFHIJL":"DFEIBHJL","BDEFHIJK":"DFEKBHJI","BDEFGJKL":"DFEKBJGL","BDEFGIKL":"DFEKBIGL","BDEFGIJL":"DFEIBJGL","BDEFGIJK":"DFEKBJGI","BDEFGHKL":"DFEKBHGL","BDEFGHJL":"DFHEBJGL","BDEFGHJK":"DFHKBJGE","BDEFGHIL":"DFEIBHGL","BDEFGHIK":"DFEKBHGI","BDEFGHIJ":"DFHIBJGE","BCGHIJKL":"CGHKBIJL","BCFHIJKL":"CFHKBIJL","BCFGIJKL":"CFIKBJGL","BCFGHJKL":"CFHKBJGL","BCFGHIKL":"CFHKBIGL","BCFGHIJL":"CFHIBJGL","BCFGHIJK":"CFHKBJGI","BCEHIJKL":"CHEKBIJL","BCEGIJKL":"CGEKBIJL","BCEGHJKL":"CGEKBHJL","BCEGHIKL":"CHEKBIGL","BCEGHIJL":"CGEIBHJL","BCEGHIJK":"CGEKBHJI","BCEFIJKL":"CFEKBIJL","BCEFHJKL":"CFEKBHJL","BCEFHIKL":"CFEKBHIL","BCEFHIJL":"CFEIBHJL","BCEFHIJK":"CFEKBHJI","BCEFGJKL":"CFEKBJGL","BCEFGIKL":"CFEKBIGL","BCEFGIJL":"CFEIBJGL","BCEFGIJK":"CFEKBJGI","BCEFGHKL":"CFEKBHGL","BCEFGHJL":"CFHEBJGL","BCEFGHJK":"CFHKBJGE","BCEFGHIL":"CFEIBHGL","BCEFGHIK":"CFEKBHGI","BCEFGHIJ":"CFHIBJGE","BCDHIJKL":"CDHKBIJL","BCDGIJKL":"CDIKBJGL","BCDGHJKL":"CDHKBJGL","BCDGHIKL":"CDHKBIGL","BCDGHIJL":"CDHIBJGL","BCDGHIJK":"CDHKBJGI","BCDFIJKL":"DFCKBIJL","BCDFHJKL":"DFCKBHJL","BCDFHIKL":"DFCKBHIL","BCDFHIJL":"DFCIBHJL","BCDFHIJK":"DFCKBHJI","BCDFGJKL":"DFCKBJGL","BCDFGIKL":"DFCKBIGL","BCDFGIJL":"DFCIBJGL","BCDFGIJK":"DFCKBJGI","BCDFGHKL":"DFCKBHGL","BCDFGHJL":"DFCJBHGL","BCDFGHJK":"CFHKBJGD","BCDFGHIL":"DFCIBHGL","BCDFGHIK":"DFCKBHGI","BCDFGHIJ":"CFHIBJGD","BCDEIJKL":"CDEKBIJL","BCDEHJKL":"CDEKBHJL","BCDEHIKL":"CDEKBHIL","BCDEHIJL":"CDEIBHJL","BCDEHIJK":"CDEKBHJI","BCDEGJKL":"CDEKBJGL","BCDEGIKL":"CDEKBIGL","BCDEGIJL":"CDEIBJGL","BCDEGIJK":"CDEKBJGI","BCDEGHKL":"CDEKBHGL","BCDEGHJL":"CDHEBJGL","BCDEGHJK":"CDHKBJGE","BCDEGHIL":"CDEIBHGL","BCDEGHIK":"CDEKBHGI","BCDEGHIJ":"CDHIBJGE","BCDEFJKL":"DFCKBEJL","BCDEFIKL":"DFCKBIEL","BCDEFIJL":"DFCIBEJL","BCDEFIJK":"DFCKBEJI","BCDEFHKL":"DFCKBHEL","BCDEFHJL":"DFCEBHJL","BCDEFHJK":"DFCKBHJE","BCDEFHIL":"DFCIBHEL","BCDEFHIK":"DFCKBHEI","BCDEFHIJ":"DFCIBHJE","BCDEFGKL":"DFCKBEGL","BCDEFGJL":"DFCEBJGL","BCDEFGJK":"DFCKBJGE","BCDEFGIL":"DFCIBEGL","BCDEFGIK":"DFCKBEGI","BCDEFGIJ":"DFCIBJGE","BCDEFGHL":"DFCEBHGL","BCDEFGHK":"DFCKBHGE","BCDEFGHJ":"CFHEBJGD","BCDEFGHI":"DFCIBHGE","AFGHIJKL":"FGHKIAJL","AEGHIJKL":"AGEKIHJL","AEFHIJKL":"FHEKIAJL","AEFGIJKL":"FGEKIAJL","AEFGHJKL":"FHEKJAGL","AEFGHIKL":"FHEKIAGL","AEFGHIJL":"FHEIJAGL","AEFGHIJK":"FHEKJAGI","ADGHIJKL":"DGHKIAJL","ADFHIJKL":"DFHKIAJL","ADFGIJKL":"DFIKJAGL","ADFGHJKL":"DFHKJAGL","ADFGHIKL":"DFHKIAGL","ADFGHIJL":"DFHIJAGL","ADFGHIJK":"DFHKJAGI","ADEHIJKL":"DHEKIAJL","ADEGIJKL":"DGEKIAJL","ADEGHJKL":"DHEKJAGL","ADEGHIKL":"DHEKIAGL","ADEGHIJL":"DHEIJAGL","ADEGHIJK":"DHEKJAGI","ADEFIJKL":"DFEKIAJL","ADEFHJKL":"DFHKEAJL","ADEFHIKL":"DFHKIAEL","ADEFHIJL":"DFHIEAJL","ADEFHIJK":"DFHKEAJI","ADEFGJKL":"DFEKJAGL","ADEFGIKL":"DFEKIAGL","ADEFGIJL":"DFEIJAGL","ADEFGIJK":"DFEKJAGI","ADEFGHKL":"DFHKEAGL","ADEFGHJL":"DFHEJAGL","ADEFGHJK":"DFHKJAGE","ADEFGHIL":"DFHIEAGL","ADEFGHIK":"DFHKEAGI","ADEFGHIJ":"DFHIJAGE","ACGHIJKL":"CGHKIAJL","ACFHIJKL":"CFHKIAJL","ACFGIJKL":"CFIKJAGL","ACFGHJKL":"CFHKJAGL","ACFGHIKL":"CFHKIAGL","ACFGHIJL":"CFHIJAGL","ACFGHIJK":"CFHKJAGI","ACEHIJKL":"CHEKIAJL","ACEGIJKL":"CGEKIAJL","ACEGHJKL":"CHEKJAGL","ACEGHIKL":"CHEKIAGL","ACEGHIJL":"CHEIJAGL","ACEGHIJK":"CHEKJAGI","ACEFIJKL":"CFEKIAJL","ACEFHJKL":"CFHKEAJL","ACEFHIKL":"CFHKIAEL","ACEFHIJL":"CFHIEAJL","ACEFHIJK":"CFHKEAJI","ACEFGJKL":"CFEKJAGL","ACEFGIKL":"CFEKIAGL","ACEFGIJL":"CFEIJAGL","ACEFGIJK":"CFEKJAGI","ACEFGHKL":"CFHKEAGL","ACEFGHJL":"CFHEJAGL","ACEFGHJK":"CFHKJAGE","ACEFGHIL":"CFHIEAGL","ACEFGHIK":"CFHKEAGI","ACEFGHIJ":"CFHIJAGE","ACDHIJKL":"CDHKIAJL","ACDGIJKL":"CDIKJAGL","ACDGHJKL":"CDHKJAGL","ACDGHIKL":"CDHKIAGL","ACDGHIJL":"CDHIJAGL","ACDGHIJK":"CDHKJAGI","ACDFIJKL":"DFCKIAJL","ACDFHJKL":"CDHKFAJL","ACDFHIKL":"CDHKIAFL","ACDFHIJL":"CDHIFAJL","ACDFHIJK":"CDHKFAJI","ACDFGJKL":"DFCKJAGL","ACDFGIKL":"DFCKIAGL","ACDFGIJL":"DFCIJAGL","ACDFGIJK":"DFCKJAGI","ACDFGHKL":"CDHKFAGL","ACDFGHJL":"DFCHJAGL","ACDFGHJK":"CFHKJAGD","ACDFGHIL":"CDHIFAGL","ACDFGHIK":"CDHKFAGI","ACDFGHIJ":"CFHIJAGD","ACDEIJKL":"CDEKIAJL","ACDEHJKL":"CDHKEAJL","ACDEHIKL":"CDHKIAEL","ACDEHIJL":"CDHIEAJL","ACDEHIJK":"CDHKEAJI","ACDEGJKL":"CDEKJAGL","ACDEGIKL":"CDEKIAGL","ACDEGIJL":"CDEIJAGL","ACDEGIJK":"CDEKJAGI","ACDEGHKL":"CDHKEAGL","ACDEGHJL":"CDHEJAGL","ACDEGHJK":"CDHKJAGE","ACDEGHIL":"CDHIEAGL","ACDEGHIK":"CDHKEAGI","ACDEGHIJ":"CDHIJAGE","ACDEFJKL":"DFCKEAJL","ACDEFIKL":"DFCKIAEL","ACDEFIJL":"DFCIEAJL","ACDEFIJK":"DFCKEAJI","ACDEFHKL":"CDHKFAEL","ACDEFHJL":"CDHEFAJL","ACDEFHJK":"CFHKEAJD","ACDEFHIL":"CDHIFAEL","ACDEFHIK":"CDHKFAEI","ACDEFHIJ":"CFHIEAJD","ACDEFGKL":"DFCKEAGL","ACDEFGJL":"DFCEJAGL","ACDEFGJK":"DFCKJAGE","ACDEFGIL":"DFCIEAGL","ACDEFGIK":"DFCKEAGI","ACDEFGIJ":"DFCIJAGE","ACDEFGHL":"CDHEFAGL","ACDEFGHK":"CFHKEAGD","ACDEFGHJ":"CFHEJAGD","ACDEFGHI":"CFHIEAGD","ABGHIJKL":"AGHKBIJL","ABFHIJKL":"AFHKBIJL","ABFGIJKL":"FGIKBAJL","ABFGHJKL":"FGHKBAJL","ABFGHIKL":"AFHKBIGL","ABFGHIJL":"FGHIBAJL","ABFGHIJK":"FGHKBAJI","ABEHIJKL":"AHEKBIJL","ABEGIJKL":"AGEKBIJL","ABEGHJKL":"AGEKBHJL","ABEGHIKL":"AHEKBIGL","ABEGHIJL":"AGEIBHJL","ABEGHIJK":"AGEKBHJI","ABEFIJKL":"AFEKBIJL","ABEFHJKL":"FHEKBAJL","ABEFHIKL":"FHEKBAIL","ABEFHIJL":"FHEIBAJL","ABEFHIJK":"FHEKBAJI","ABEFGJKL":"FGEKBAJL","ABEFGIKL":"AFEKBIGL","ABEFGIJL":"FGEIBAJL","ABEFGIJK":"FGEKBAJI","ABEFGHKL":"FHEKBAGL","ABEFGHJL":"FGHEBAJL","ABEFGHJK":"FGHKBAJE","ABEFGHIL":"FHEIBAGL","ABEFGHIK":"FHEKBAGI","ABEFGHIJ":"FGHIBAJE","ABDHIJKL":"DHIKBAJL","ABDGIJKL":"DGIKBAJL","ABDGHJKL":"DGHKBAJL","ABDGHIKL":"DHIKBAGL","ABDGHIJL":"DGHIBAJL","ABDGHIJK":"DGHKBAJI","ABDFIJKL":"DFIKBAJL","ABDFHJKL":"DFHKBAJL","ABDFHIKL":"DFHKBAIL","ABDFHIJL":"DFHIBAJL","ABDFHIJK":"DFHKBAJI","ABDFGJKL":"DGFKBAJL","ABDFGIKL":"DFIKBAGL","ABDFGIJL":"DGFIBAJL","ABDFGIJK":"DGFKBAJI","ABDFGHKL":"DFHKBAGL","ABDFGHJL":"DFHJBAGL","ABDFGHJK":"DFHKBAGJ","ABDFGHIL":"DFHIBAGL","ABDFGHIK":"DFHKBAGI","ABDFGHIJ":"DFHJBAGI","ABDEIJKL":"ADEKBIJL","ABDEHJKL":"DHEKBAJL","ABDEHIKL":"DHEKBAIL","ABDEHIJL":"DHEIBAJL","ABDEHIJK":"DHEKBAJI","ABDEGJKL":"DGEKBAJL","ABDEGIKL":"ADEKBIGL","ABDEGIJL":"DGEIBAJL","ABDEGIJK":"DGEKBAJI","ABDEGHKL":"DHEKBAGL","ABDEGHJL":"DGHEBAJL","ABDEGHJK":"DGHKBAJE","ABDEGHIL":"DHEIBAGL","ABDEGHIK":"DHEKBAGI","ABDEGHIJ":"DGHIBAJE","ABDEFJKL":"DFEKBAJL","ABDEFIKL":"DFEKBAIL","ABDEFIJL":"DFEIBAJL","ABDEFIJK":"DFEKBAJI","ABDEFHKL":"DFHKBAEL","ABDEFHJL":"DFHEBAJL","ABDEFHJK":"DFHKBAJE","ABDEFHIL":"DFHIBAEL","ABDEFHIK":"DFHKBAEI","ABDEFHIJ":"DFHIBAJE","ABDEFGKL":"DFEKBAGL","ABDEFGJL":"DFEJBAGL","ABDEFGJK":"DFEKBAGJ","ABDEFGIL":"DFEIBAGL","ABDEFGIK":"DFEKBAGI","ABDEFGIJ":"DFEJBAGI","ABDEFGHL":"DFHEBAGL","ABDEFGHK":"DFHKBAGE","ABDEFGHJ":"DFHJBAGE","ABDEFGHI":"DFHIBAGE","ABCHIJKL":"CHIKBAJL","ABCGIJKL":"CGIKBAJL","ABCGHJKL":"CGHKBAJL","ABCGHIKL":"CHIKBAGL","ABCGHIJL":"CGHIBAJL","ABCGHIJK":"CGHKBAJI","ABCFIJKL":"CFIKBAJL","ABCFHJKL":"CFHKBAJL","ABCFHIKL":"CFHKBAIL","ABCFHIJL":"CFHIBAJL","ABCFHIJK":"CFHKBAJI","ABCFGJKL":"FGCKBAJL","ABCFGIKL":"CFIKBAGL","ABCFGIJL":"FGCIBAJL","ABCFGIJK":"FGCKBAJI","ABCFGHKL":"CFHKBAGL","ABCFGHJL":"CFHJBAGL","ABCFGHJK":"CFHKBAGJ","ABCFGHIL":"CFHIBAGL","ABCFGHIK":"CFHKBAGI","ABCFGHIJ":"CFHJBAGI","ABCEIJKL":"ACEKBIJL","ABCEHJKL":"CHEKBAJL","ABCEHIKL":"CHEKBAIL","ABCEHIJL":"CHEIBAJL","ABCEHIJK":"CHEKBAJI","ABCEGJKL":"CGEKBAJL","ABCEGIKL":"ACEKBIGL","ABCEGIJL":"CGEIBAJL","ABCEGIJK":"CGEKBAJI","ABCEGHKL":"CHEKBAGL","ABCEGHJL":"CGHEBAJL","ABCEGHJK":"CGHKBAJE","ABCEGHIL":"CHEIBAGL","ABCEGHIK":"CHEKBAGI","ABCEGHIJ":"CGHIBAJE","ABCEFJKL":"CFEKBAJL","ABCEFIKL":"CFEKBAIL","ABCEFIJL":"CFEIBAJL","ABCEFIJK":"CFEKBAJI","ABCEFHKL":"CFHKBAEL","ABCEFHJL":"CFHEBAJL","ABCEFHJK":"CFHKBAJE","ABCEFHIL":"CFHIBAEL","ABCEFHIK":"CFHKBAEI","ABCEFHIJ":"CFHIBAJE","ABCEFGKL":"CFEKBAGL","ABCEFGJL":"CFEJBAGL","ABCEFGJK":"CFEKBAGJ","ABCEFGIL":"CFEIBAGL","ABCEFGIK":"CFEKBAGI","ABCEFGIJ":"CFEJBAGI","ABCEFGHL":"CFHEBAGL","ABCEFGHK":"CFHKBAGE","ABCEFGHJ":"CFHJBAGE","ABCEFGHI":"CFHIBAGE","ABCDIJKL":"CDIKBAJL","ABCDHJKL":"CDHKBAJL","ABCDHIKL":"CDHKBAIL","ABCDHIJL":"CDHIBAJL","ABCDHIJK":"CDHKBAJI","ABCDGJKL":"DGCKBAJL","ABCDGIKL":"CDIKBAGL","ABCDGIJL":"DGCIBAJL","ABCDGIJK":"DGCKBAJI","ABCDGHKL":"CDHKBAGL","ABCDGHJL":"CDHJBAGL","ABCDGHJK":"CDHKBAGJ","ABCDGHIL":"CDHIBAGL","ABCDGHIK":"CDHKBAGI","ABCDGHIJ":"CDHJBAGI","ABCDFJKL":"DFCKBAJL","ABCDFIKL":"DFCKBAIL","ABCDFIJL":"DFCIBAJL","ABCDFIJK":"DFCKBAJI","ABCDFHKL":"CDHKBAFL","ABCDFHJL":"DFCHBAJL","ABCDFHJK":"CFHKBAJD","ABCDFHIL":"CDHIBAFL","ABCDFHIK":"CDHKBAFI","ABCDFHIJ":"CFHIBAJD","ABCDFGKL":"DFCKBAGL","ABCDFGJL":"DFCJBAGL","ABCDFGJK":"DFCKBAGJ","ABCDFGIL":"DFCIBAGL","ABCDFGIK":"DFCKBAGI","ABCDFGIJ":"DFCJBAGI","ABCDFGHL":"DFCHBAGL","ABCDFGHK":"CFHKBAGD","ABCDFGHJ":"CFHJBAGD","ABCDFGHI":"CFHIBAGD","ABCDEJKL":"CDEKBAJL","ABCDEIKL":"CDEKBAIL","ABCDEIJL":"CDEIBAJL","ABCDEIJK":"CDEKBAJI","ABCDEHKL":"CDHKBAEL","ABCDEHJL":"CDHEBAJL","ABCDEHJK":"CDHKBAJE","ABCDEHIL":"CDHIBAEL","ABCDEHIK":"CDHKBAEI","ABCDEHIJ":"CDHIBAJE","ABCDEGKL":"CDEKBAGL","ABCDEGJL":"CDEJBAGL","ABCDEGJK":"CDEKBAGJ","ABCDEGIL":"CDEIBAGL","ABCDEGIK":"CDEKBAGI","ABCDEGIJ":"CDEJBAGI","ABCDEGHL":"CDHEBAGL","ABCDEGHK":"CDHKBAGE","ABCDEGHJ":"CDHJBAGE","ABCDEGHI":"CDHIBAGE","ABCDEFKL":"DFCKBAEL","ABCDEFJL":"DFCEBAJL","ABCDEFJK":"DFCKBAJE","ABCDEFIL":"DFCIBAEL","ABCDEFIK":"DFCKBAEI","ABCDEFIJ":"DFCIBAJE","ABCDEFHL":"CDHEBAFL","ABCDEFHK":"CFHKBAED","ABCDEFHJ":"CFHEBAJD","ABCDEFHI":"CFHIBAED","ABCDEFGL":"DFCEBAGL","ABCDEFGK":"DFCKBAGE","ABCDEFGJ":"DFCJBAGE","ABCDEFGI":"DFCIBAGE","ABCDEFGH":"CFHEBAGD"}; // FIFA Anexo C (495 combinaciones) -- valor en orden THIRD_SLOTS [M74,M77,M79,M80,M81,M82,M85,M87]
 
 // Núcleo de simulación: función PURA (corre igual en main thread y en el worker)
 function simulateCore(P){
@@ -526,7 +558,7 @@ function simulateCore(P){
 
 // ================= ESTADO =================
 let results={},koResults={},odds={},mkts={},koOdds={};
-let settings={auto:true,mpExact:6,mpOut:3,amOut:2,amBonus:1,wMkt:0.8,kFactor:60};
+let settings={auto:true,amOut:2,amBonus:1,tpExact:12,tpOut:5,tpGoal:2,wMkt:0.8,kFactor:60};
 try{const s=localStorage.getItem("prode26");if(s){const o=JSON.parse(s);results=o.results||{};koResults=o.koResults||{};odds=o.odds||{};mkts=o.mkts||{};koOdds=o.koOdds||{};Object.assign(settings,o.settings||{});}}catch(e){}
 function save(){try{localStorage.setItem("prode26",JSON.stringify({results,koResults,odds,mkts,koOdds,settings}));}catch(e){}}
 
@@ -579,6 +611,7 @@ function buildWorker(){
     const fns=[homeBonus,lambdas,scoreMatrix,matchProbs,samplePoisson,sampleScore,eloDelta,drawSendsBoth,inflateDraw,sampleScoreOutcome,rankGroup,assignThirds,simulateCore];
     const code=`"use strict";
 const {BASE,CC,SS,RHO,MAXG,DRAW_BOOST,W_MKT}=${JSON.stringify(CONSTS)};
+const THIRD_MAP=${JSON.stringify(THIRD_MAP)};
 ${fns.map(f=>f.toString()).join("\n")}
 onmessage=function(e){postMessage(simulateCore(e.data));};`;
     return new Worker(URL.createObjectURL(new Blob([code],{type:"text/javascript"})));
@@ -612,27 +645,52 @@ function simPayload(N){
 }
 
 // ================= PRODE (doble) =================
-function prodePicksDual(eA,eB,ov,lam){
-  const lab=lam||lambdas(eA,eB); // λ implícitas del mercado si existen (forma del marcador)
-  let M=scoreMatrix(lab[0],lab[1]);
+function prodePicksDual(eA,eB,ov,lam,ko){
+  // ko=true → partido de eliminatoria: el prode cuenta el marcador a 120' (con alargue).
+  // Usamos λ del mercado si hay (ya reflejan el partido KO), si no las del modelo con
+  // un leve factor de cautela, y construimos la matriz de 120'. El 1X2 (ov) es a 90',
+  // así que en KO no lo aplicamos: las probabilidades de resultado salen de la matriz 120'.
+  const lab = ko ? (lam || [lambdas(eA,eB)[0]*KO_CAUTION, lambdas(eA,eB)[1]*KO_CAUTION])
+                 : (lam || lambdas(eA,eB));
+  let M = ko ? ko120Matrix(lab[0],lab[1]) : scoreMatrix(lab[0],lab[1]);
   let P1=0,PX=0,P2=0;
   for(let i=0;i<=MAXG;i++)for(let j=0;j<=MAXG;j++){if(i>j)P1+=M[i][j];else if(i===j)PX+=M[i][j];else P2+=M[i][j];}
-  if(ov){
+  if(ov&&!ko){
     const f1=ov[0]/Math.max(P1,1e-9),fx=ov[1]/Math.max(PX,1e-9),f2=ov[2]/Math.max(P2,1e-9);
     M=M.map((row,i)=>row.map((v,j)=>v*(i>j?f1:(i===j?fx:f2))));
     P1=ov[0];PX=ov[1];P2=ov[2];
   }
   const pout=(i,j)=>i>j?P1:(i===j?PX:P2);
-  const mk=(po,pb)=>{
+  // Marginales de goles por equipo (para el prode TuProde que premia acertar los goles de cada equipo)
+  const prow=[],pcol=[];
+  for(let i=0;i<=MAXG;i++){let r=0;for(let j=0;j<=MAXG;j++)r+=M[i][j];prow[i]=r;}
+  for(let j=0;j<=MAXG;j++){let c=0;for(let i=0;i<=MAXG;i++)c+=M[i][j];pcol[j]=c;}
+  // mk(evFn): evalúa cada marcador 0..6 con la función de puntos esperados del prode.
+  const mk=(evFn)=>{
     const list=[];
     for(let i=0;i<=6;i++)for(let j=0;j<=6;j++)
-      list.push({i,j,ev:po*pout(i,j)+pb*M[i][j],out:i>j?"1":(i===j?"X":"2")});
+      list.push({i,j,p:M[i][j],ev:evFn(i,j),out:i>j?"1":(i===j?"X":"2")});
     list.sort((a,b)=>b.ev-a.ev);
-    return {best:list[0],alt:list.find(x=>x.out!==list[0].out),top:list.slice(0,3)};
+    const top=list.slice(0,3);
+    // Confianza = cuánto se despega el pick #1 del 2º marcador, en pts esperados.
+    // Los marcadores exactos son intrínsecamente parejos, así que el margen relativo
+    // (gap/EV#1) es la señal honesta de "¿da igual cuál elijo?". Umbrales calibrados
+    // al rango real observado (0–4%): ≥2% domina claro; <0.8% es prácticamente un empate.
+    const gap=top[0].ev-top[1].ev, rel=top[0].ev>0?gap/top[0].ev:0;
+    const conf=rel>=0.02?{lvl:"alta",c:"#2ecc71"}:rel>=0.008?{lvl:"media",c:"#f1c40f"}:{lvl:"pareja",c:"#e67e22"};
+    conf.rel=rel; conf.gap=gap;
+    return {best:list[0],alt:list.find(x=>x.out!==list[0].out),top,conf};
   };
+  // Amigos: amOut por acertar ganador/empate + amBonus por marcador exacto.
+  const evAM=(i,j)=>settings.amOut*pout(i,j)+settings.amBonus*M[i][j];
+  // TuProde: tpOut por ganador/empate + tpGoal por cada equipo cuyos goles acertás +
+  // tpExtra extra al marcador exacto (12 = 5 + 2 + 2 + 3). EV demostrado contra los
+  // 7 ejemplos del reglamento: 3-1→12, 3-0→7, 2-1→7, 2-0→5, 0-1→2, 3-3→2, 0-0→0.
+  const tpExtra=settings.tpExact-settings.tpOut-2*settings.tpGoal;
+  const evTP=(i,j)=>settings.tpOut*pout(i,j)+settings.tpGoal*(prow[i]+pcol[j])+tpExtra*M[i][j];
   return {
-    mp:mk(settings.mpOut, Math.max(0,settings.mpExact-settings.mpOut)),
-    am:mk(settings.amOut, settings.amBonus),
+    am:mk(evAM),
+    tp:mk(evTP),
     P1,PX,P2
   };
 }
@@ -783,7 +841,7 @@ async function syncESPN(manual){
 // ================= RENDER =================
 const $=s=>document.querySelector(s);
 function pct(x,d=1){return (100*x).toFixed(d)+"%";}
-let currentElo={},activeGroup="A",activeGroupP="A";
+let currentElo={},activeGroup="A",activeGroupP="A",prodeView=null; // prodeView: 'ko' | 'grupos' | null(auto)
 const openOdds=new Set();
 let toastTimer=null;
 function toast(msg){
@@ -892,9 +950,80 @@ function renderPartidos(){
   });
 }
 
+// ¿Está definido (≥99.9% en la simulación) y sin jugar un cruce de eliminatoria?
+function koMatchup(mid){
+  if(!agg||koResults[mid])return null;
+  const top=Object.entries(agg.matchup[mid]||{}).sort((a,b)=>b[1]-a[1])[0];
+  if(!top||top[1]/agg.N<0.999)return null;
+  const xy=top[0].split("|");return {tA:xy[0],tB:xy[1]};
+}
+// Caja de pick de un prode: marcador óptimo + %, pts esperados, confianza y la
+// jugada "diferenciate" (mejor alternativa con otro resultado y cuánto resignás).
+function pickBox(sub,label,color,P,teamA,teamB){
+  const a=sub.best, alt=sub.alt, conf=sub.conf, d=a.ev-alt.ev;
+  const outName=o=>o==="X"?"empate":(o==="1"?teamA:teamB);
+  const outP=o=>o==="1"?P.P1:(o==="X"?P.PX:P.P2);
+  const worth = outP(alt.out)>=0.28 && d<=0.18*a.ev; // diferenciar barato y plausible
+  return `<div class="pick ${conf.lvl==='alta'?'hot':''}">
+      <div class="lbl" style="color:${color}">${label}</div>
+      <div class="val">${a.i}-${a.j} <span class="px">${(a.p*100).toFixed(0)}%</span></div>
+      <div class="ev">${a.ev.toFixed(2)} pts esp. <span class="conf" style="color:${conf.c}">● ${conf.lvl}</span></div>
+      <div class="alt">2°/3°: ${sub.top.slice(1).map(t=>`${t.i}-${t.j} (${(t.p*100).toFixed(0)}%)`).join(" · ")}</div>
+      <div class="alt ${worth?'difhot':''}">🎲 dif: <b>${alt.i}-${alt.j}</b> → ${outName(alt.out)} (−${d.toFixed(2)})${worth?' ✓ conviene':''}</div>
+    </div>`;
+}
+// Tarjeta de un partido de eliminatoria (marcador a 120', con alargue).
+function koMatchCard(mid,tA,tB){
+  const st=STAGE_OF[mid]||"F";
+  const eA2=currentElo[tA]+homeBonus(tA,st),eB2=currentElo[tB]+homeBonus(tB,st);
+  const ko=koOdds[mid];let ov2=null,lam2=null;
+  if(ko&&ko.pair===tA+"|"+tB){
+    ov2=blendMarket(ko.o,eA2,eB2);
+    if(ko.x&&(ko.x.ou||ko.x.sp))lam2=impliedLambdas(ko.o,ko.x,eA2,eB2);   // λ de mercado (totales/spread)
+    if(!lam2){const f=fitLambdas({w:ov2[0],d:ov2[1]},lambdas(eA2,eB2));if(f[2]<=0.02)lam2=[f[0],f[1]];} // si no, λ del 1X2
+  }
+  const pk=prodePicksDual(eA2,eB2,null,lam2,true); // ko=true → matriz 120'
+  return `<div class="match"><div class="mhd">${flagHTML(tA)} ${tA} – ${tB} ${flagHTML(tB)}
+      ${ko&&ko.pair===tA+"|"+tB?'<span class="mtag">📊</span>':''} <span class="mdate">${mid.replace("M","P.")}</span></div>
+    <div class="probbar" role="img" aria-label="${tA} ${pct(pk.P1,0)}, empate ${pct(pk.PX,0)}, ${tB} ${pct(pk.P2,0)}"><div style="width:${100*pk.P1}%"></div><div style="width:${100*pk.PX}%"></div><div style="width:${100*pk.P2}%"></div></div>
+    <div class="problbl"><span>${tA} ${pct(pk.P1,0)}</span><span>X ${pct(pk.PX,0)}</span><span>${tB} ${pct(pk.P2,0)}</span></div>
+    <div class="pickbox">
+      ${pickBox(pk.am,"Amigos · 2+1","var(--accent2)",pk,tA,tB)}
+      ${pickBox(pk.tp,"TuProde · 12/5/2","var(--accent)",pk,tA,tB)}
+    </div></div>`;
+}
 function renderProde(){
-  groupSelector("gselp",activeGroupP,g=>{activeGroupP=g;renderProde();});
   const wrap=$("#prodecards");if(!wrap)return;wrap.innerHTML="";
+  const sel=$("#gselp");if(sel)sel.innerHTML="";
+  const koReady=groupsComplete()&&agg;
+  const view = !koReady ? "grupos" : (prodeView||"ko");
+  // Toggle de vista (solo en la vista de ronda actual; en grupos va un botón "volver")
+  if(view==="ko"&&sel){
+    const mk=(id,txt)=>{const b=document.createElement("button");b.textContent=txt;b.setAttribute("role","tab");
+      if(view===id){b.className="active";b.setAttribute("aria-selected","true");}
+      b.onclick=()=>{prodeView=id;renderProde();};return b;};
+    sel.appendChild(mk("ko","Ronda actual"));
+    sel.appendChild(mk("grupos","Grupos"));
+  }
+  if(view==="ko"){
+    let shown=0;
+    for(const [label,rows] of KO_ROUNDS){
+      let body="",n=0;
+      for(const mrow of rows){const mu=koMatchup(mrow[0]);if(!mu)continue;body+=koMatchCard(mrow[0],mu.tA,mu.tB);n++;}
+      if(!n)continue;
+      const card=document.createElement("div");card.className="card";
+      card.innerHTML=`<h3>${label}</h3>${body}`;wrap.appendChild(card);
+      shown+=n;
+    }
+    if(!shown){const c=document.createElement("div");c.className="card";c.innerHTML="<p>Todavía no hay cruces de eliminatoria definidos. Se mostrarán acá apenas se cierren los grupos.</p>";wrap.appendChild(c);}
+    return;
+  }
+  // -------- Vista de grupos --------
+  groupSelector("gselp",activeGroupP,g=>{prodeView="grupos";activeGroupP=g;renderProde();});
+  if(koReady&&sel){ // reinsertá el toggle arriba del selector de grupos
+    const back=document.createElement("button");back.textContent="‹ Ronda actual";back.style.marginRight="8px";
+    back.onclick=()=>{prodeView="ko";renderProde();};sel.insertBefore(back,sel.firstChild);
+  }
   const g=activeGroupP;
   const card=document.createElement("div");card.className="card";
   let html=`<h3>Grupo ${g}</h3>`;
@@ -903,58 +1032,17 @@ function renderProde(){
     const eH=currentElo[m.h]+homeBonus(m.h,"G"),eA=currentElo[m.a]+homeBonus(m.a,"G");
     const ef=effectiveProbs(m,eH,eA);
     const pk=prodePicksDual(eH,eA,ef.ov,ef.lam);
-    const dMP=pk.mp.best.ev-pk.mp.alt.ev, dAM=pk.am.best.ev-pk.am.alt.ev;
     html+=`<div class="match" ${played?'style="opacity:.45"':''}>
-      <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${flagHTML(m.h)} ${m.h} – ${m.a} ${flagHTML(m.a)}
+      <div class="mhd">${flagHTML(m.h)} ${m.h} – ${m.a} ${flagHTML(m.a)}
         ${ef.ov?'<span class="mtag">📊</span>':''} <span class="mdate">J${m.md} · ${m.date}</span>
         ${played?`<span class="mdate">(jugado ${played[0]}-${played[1]})</span>`:""}</div>
       <div class="pickbox">
-        <div class="pick ${dMP<0.08?'hot':''}">
-          <div class="lbl" style="color:var(--accent)">MP · ${settings.mpExact}/${settings.mpOut}</div>
-          <div class="val">${pk.mp.best.i}-${pk.mp.best.j}</div>
-          <div class="ev">${pk.mp.best.ev.toFixed(2)} pts esp.</div>
-          <div class="alt">${pk.mp.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div>
-          <div class="alt">alt ${pk.mp.alt.out}: ${pk.mp.alt.i}-${pk.mp.alt.j} (Δ ${dMP.toFixed(2)})</div>
-        </div>
-        <div class="pick ${dAM<0.08?'hot':''}">
-          <div class="lbl" style="color:var(--accent2)">Amigos · ${settings.amOut}+${settings.amBonus}</div>
-          <div class="val">${pk.am.best.i}-${pk.am.best.j}</div>
-          <div class="ev">${pk.am.best.ev.toFixed(2)} pts esp.</div>
-          <div class="alt">${pk.am.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div>
-          <div class="alt">alt ${pk.am.alt.out}: ${pk.am.alt.i}-${pk.am.alt.j} (Δ ${dAM.toFixed(2)})</div>
-        </div>
+        ${pickBox(pk.am,"Amigos · 2+1","var(--accent2)",pk,m.h,m.a)}
+        ${pickBox(pk.tp,"TuProde · 12/5/2","var(--accent)",pk,m.h,m.a)}
       </div>
     </div>`;
   }
   card.innerHTML=html;wrap.appendChild(card);
-  if(groupsComplete()&&agg){
-    const card2=document.createElement("div");card2.className="card";
-    let h2=`<h3>Eliminatorias definidas</h3>`;
-    let any=false;
-    for(const mrow of KO_ALL){
-      const mid=mrow[0];
-      if(koResults[mid])continue;
-      const top=Object.entries(agg.matchup[mid]||{}).sort((a,b)=>b[1]-a[1])[0];
-      if(!top||top[1]/agg.N<0.999)continue;
-      any=true;
-      const xy=top[0].split("|"),tA=xy[0],tB=xy[1];
-      const st=STAGE_OF[mid]||"F";
-      const eA2=currentElo[tA]+homeBonus(tA,st),eB2=currentElo[tB]+homeBonus(tB,st);
-      const ko=koOdds[mid];
-      let ov2=null,lam2=null;
-      if(ko&&ko.pair===tA+"|"+tB){
-        ov2=blendMarket(ko.o,eA2,eB2);
-        if(ko.x&&(ko.x.ou||ko.x.sp))lam2=impliedLambdas(ko.o,ko.x,eA2,eB2);
-      }
-      const pk=prodePicksDual(eA2,eB2,ov2,lam2);
-      h2+=`<div class="match"><div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${flagHTML(tA)} ${tA} – ${tB} ${flagHTML(tB)} <span class="mdate">${mid.replace("M","P.")}</span></div>
-        <div class="pickbox">
-          <div class="pick"><div class="lbl" style="color:var(--accent)">MP</div><div class="val">${pk.mp.best.i}-${pk.mp.best.j}</div><div class="ev">${pk.mp.best.ev.toFixed(2)} pts</div><div class="alt">${pk.mp.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div></div>
-          <div class="pick"><div class="lbl" style="color:var(--accent2)">Amigos</div><div class="val">${pk.am.best.i}-${pk.am.best.j}</div><div class="ev">${pk.am.best.ev.toFixed(2)} pts</div><div class="alt">${pk.am.top.slice(1).map(t=>`${t.i}-${t.j} ${t.ev.toFixed(2)}`).join(" · ")}</div></div>
-        </div></div>`;
-    }
-    if(any){card2.innerHTML=h2;wrap.appendChild(card2);}
-  }
 }
 
 function renderGrupos(){
@@ -1084,11 +1172,11 @@ document.querySelectorAll("nav button").forEach(b=>{
 // Ajustes
 function bindSettings(){
   $("#setauto").checked=settings.auto;
-  $("#mpExact").value=settings.mpExact;$("#mpOut").value=settings.mpOut;
   $("#amOut").value=settings.amOut;$("#amBonus").value=settings.amBonus;
+  $("#tpExact").value=settings.tpExact;$("#tpOut").value=settings.tpOut;$("#tpGoal").value=settings.tpGoal;
   $("#wMkt").value=settings.wMkt;$("#kFactor").value=settings.kFactor;
   $("#setauto").onchange=e=>{settings.auto=e.target.checked;save();toast(settings.auto?"Auto-sync activado":"Auto-sync desactivado");};
-  for(const k of ["mpExact","mpOut","amOut","amBonus"]){
+  for(const k of ["amOut","amBonus","tpExact","tpOut","tpGoal"]){
     $("#"+k).onchange=e=>{settings[k]=parseFloat(e.target.value)||0;save();renderProde();toast("Puntajes del prode actualizados");};
   }
   // Knobs del modelo: re-simulan el torneo (afectan la fusión mercado/modelo y la volatilidad del Elo)
@@ -1096,20 +1184,4 @@ function bindSettings(){
   $("#kFactor").onchange=e=>{settings.kFactor=Math.min(90,Math.max(30,parseFloat(e.target.value)||60));e.target.value=settings.kFactor;save();toast("Factor K: "+settings.kFactor);runAll();};
   $("#nsim").onchange=()=>runAll();
 }
-$("#resim").addEventListener("click",()=>{toast("Re-simulando torneo…");runAll();});
-$("#clearall").addEventListener("click",()=>{
-  if(confirm("¿Borrar todos los resultados y cuotas cargados?")){
-    results={};koResults={};odds={};mkts={};koOdds={};save();toast("Datos borrados");runAll();
-  }
-});
-$("#sync").addEventListener("click",()=>syncESPN(true));
-window.addEventListener("error",e=>{toast("Error: "+(e.message||"desconocido"));});
-
-bindSettings();
-syncESPN(); // dispara runAll() al terminar (con o sin éxito)
-setInterval(()=>{if(settings.auto&&document.visibilityState==="visible")syncESPN();},180000);
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&settings.auto&&lastSync&&(Date.now()-lastSync>120000))syncESPN();});
-if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("/sw.js").catch(()=>{});
-</script>
-</body>
-</html>
+$("#resim"
