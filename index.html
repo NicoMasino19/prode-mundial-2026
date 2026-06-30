@@ -1184,4 +1184,20 @@ function bindSettings(){
   $("#kFactor").onchange=e=>{settings.kFactor=Math.min(90,Math.max(30,parseFloat(e.target.value)||60));e.target.value=settings.kFactor;save();toast("Factor K: "+settings.kFactor);runAll();};
   $("#nsim").onchange=()=>runAll();
 }
-$("#resim"
+$("#resim").addEventListener("click",()=>{toast("Re-simulando torneo…");runAll();});
+$("#clearall").addEventListener("click",()=>{
+  if(confirm("¿Borrar todos los resultados y cuotas cargados?")){
+    results={};koResults={};odds={};mkts={};koOdds={};save();toast("Datos borrados");runAll();
+  }
+});
+$("#sync").addEventListener("click",()=>syncESPN(true));
+window.addEventListener("error",e=>{toast("Error: "+(e.message||"desconocido"));});
+
+bindSettings();
+syncESPN(); // dispara runAll() al terminar (con o sin éxito)
+setInterval(()=>{if(settings.auto&&document.visibilityState==="visible")syncESPN();},180000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&settings.auto&&lastSync&&(Date.now()-lastSync>120000))syncESPN();});
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("/sw.js").catch(()=>{});
+</script>
+</body>
+</html>
